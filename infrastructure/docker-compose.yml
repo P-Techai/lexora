@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: lexora_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lexora_db}
+      POSTGRES_USER: ${POSTGRES_USER:-lexora_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lexora_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lexora_user} -d ${POSTGRES_DB:-lexora_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
