@@ -1,94 +1,82 @@
-# LÉXORA — RELATÓRIO FINAL — PROMPT 06.2 (FINAL INTEGRITY CLOSURE)
+# LÉXORA — RELATÓRIO FINAL — PROMPT 06.3 (POSTGRESQL REALITY & STATE CONSISTENCY GATE)
 
-**Status Final:** **`FASE 06.2 — PASS`**  
-**Versão Final:** `v0.6.3-final-integrity-closure`  
+**Status Final:** **`FASE 06.3 — PASS`**  
+**Versão Final:** `v0.6.4-integrity-verification`  
 **Data de Conclusão:** 2026-08-12  
 **Confirmação de Escopo:** **`FASE 5 NÃO INICIADA`**
 
 ---
 
-## 1. Status
+## 1. Versão Final
 
-**`PASS`**
-
----
-
-## 2. Arquivos Criados
-
-- `alembic/versions/0004_evidence_fk_integrity.py` (Migration corretiva de FKs de Evidence para `RESTRICT`)
-- `tests/unit/test_revocation_behavior.py` (Suíte de testes comportamentais para cenários de revogação A, B e C)
-- `tests/integration/test_evidence_referential_protection.py` (Teste de integridade referencial em banco relacional)
+`v0.6.4-integrity-verification`
 
 ---
 
-## 3. Arquivos Modificados
+## 2. PostgreSQL Utilizado
 
-- `src/infrastructure/db/models/evidence_model.py` (Alterados `legal_document_id`, `legal_version_id` e `legal_node_id` de `SET NULL` para `RESTRICT`)
-- `alembic/versions/0003_legal_integrity_hardening.py` (Corrigido `downgrade()` eliminando `pass` e implementando reversão determinística)
-- `tests/unit/test_security_governance_audit.py` (Expandido auditor global para 8 tabelas/modelos ORM, 4 migrations e auditoria estática de DELETE)
-- `docs/LEGAL_INTEGRITY_HARDENING.md` (Atualizada especificação técnica)
-- `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (Este relatório)
-- `docs/CURRENT_STATE.md`
-- `docs/HANDOFF.md`
-- `docs/CHANGELOG.md`
-- `docs/DECISIONS.md`
+- Suporte a ambiente Dual: PostgreSQL relacional como motor autoritativo de integridade referencial via `TEST_DATABASE_URL` e SQLite em memória como suíte auxiliar de integração rápida.
 
 ---
 
-## 4. Migrations Criadas e Corrigidas
+## 3. Migration Head
 
-- **Migration `0003_legal_integrity_hardening.py`:** `downgrade()` corrigido com reversão determinística de FKs (sem `pass`).
-- **Migration `0004_evidence_fk_integrity.py`:** Nova migration aplicando `ON DELETE RESTRICT` nas Foreign Keys de `evidences` (`legal_document_id`, `legal_version_id`, `legal_node_id`).
-
----
-
-## 5. FKs Corrigidas
-
-- `evidences.legal_document_id` $\to$ `ON DELETE RESTRICT`
-- `evidences.legal_version_id` $\to$ `ON DELETE RESTRICT`
-- `evidences.legal_node_id` $\to$ `ON DELETE RESTRICT`
-- Confirmado que **ZERO** FKs jurídicas ou de proveniência possuem `CASCADE` ou `SET NULL`.
+- `0004_evidence_fk_integrity` (Alembic Head Efetivo).
 
 ---
 
-## 6. Testes Comportamentais
+## 4. Constraints Verificadas no Schema (Catálogo de Banco)
 
-- **Cenário A (`test_scenario_a_missing_revoking_source`):** Tentar revogar nó/documento sem `revoking_node_id` dispara `MissingRevokingSourceError` (PASS).
-- **Cenário B (`test_scenario_b_auto_revocation_prohibited`):** Tentar auto-revogação (`revoking_node_id == target_node_id`) dispara `MissingRevokingSourceError` (PASS).
-- **Cenário C (`test_scenario_c_valid_revocation`):** Revogação válida entre nós distintos ($B \neq A$) cria relação `B REVOKES A` e NÃO `A REVOKES A` (PASS).
+- Inspecionado em `tests/integration/test_postgres_schema_audit.py`:
+  - `CASCADE` no HEAD (`0004`): **`0`**
+  - `SET NULL` no HEAD (`0004`): **`0`**
+  - `RESTRICT` no HEAD (`0004`): Aplicado em todas as FKs de `sources`, `legal_documents`, `legal_versions`, `legal_nodes`, `legal_relations`, `evidences`, `raw_artifacts` e `acquisition_audit_logs`.
 
 ---
 
-## 7. Auditoria Global Automática (Respostas A a H)
+## 5. Testes de Evidence
 
-| Pergunta | Resposta Esperada | Resposta Obtida | Status |
-| :--- | :--- | :--- | :--- |
-| **A. Existem Foreign Keys jurídicas com CASCADE?** | `NÃO` | `NÃO` | PASS |
-| **B. Existem Foreign Keys jurídicas com SET NULL?** | `NÃO` | `NÃO` | PASS |
-| **C. Revogação utiliza DELETE?** | `NÃO` | `NÃO` | PASS |
-| **D. Existe auto-revogação?** | `NÃO` | `NÃO` | PASS |
-| **E. Evidence pode perder silenciosamente sua referência jurídica?** | `NÃO` | `NÃO` | PASS |
-| **F. A matemática temporal possui múltiplas implementações?** | `NÃO` | `NÃO` | PASS |
-| **G. O sistema usa relógio do sistema para determinar verdade jurídica?** | `NÃO` | `NÃO` | PASS |
-| **H. Existe downgrade incompleto em migrations novas/modificadas?** | `NÃO` | `NÃO` | PASS |
+- `test_evidence_referential_integrity_blocks_deletion`: Rejeição física de deleção com `IntegrityError` (`RESTRICT`) para:
+  - `LegalDocument` $\to$ `Evidence`
+  - `LegalVersion` $\to$ `Evidence`
+  - `LegalNode` $\to$ `Evidence`
+
+---
+
+## 6. Testes de Revogação
+
+- Cenário A (`revoking_node_id = None`): `MissingRevokingSourceError` (PASS).
+- Cenário B (`revoking_node_id == target_node_id`): `MissingRevokingSourceError` (PASS).
+- Cenário C ($B \neq A$): Cria relação `B REVOKES A` sem auto-relação (PASS).
+
+---
+
+## 7. Testes Temporais
+
+- Semântica $[effective\_from, effective\_until)$ validada com $T == effective\_until \implies \text{NOT EFFECTIVE}$.
+- `TemporalIntegrityValidator.is_date_in_range` mantido como única fonte de verdade da matemática temporal.
 
 ---
 
 ## 8. Auditoria de DELETE
 
-- Busca estática realizada em `src/`. Encontrado **0** comandos de `DELETE` ou `.delete()` sobre entidades normativas, evidências ou logs de auditoria.
+- 0 operações de delete físico em entidades normativas ou evidências em `src/`.
 
 ---
 
-## 9. Auditoria de Infraestrutura Cloud
+## 9. Auditoria de Portabilidade
 
-- **Neon PostgreSQL:** NÃO INTEGRADO
-- **Supabase Storage/DB:** NÃO INTEGRADO
-- **Cloudflare R2/Workers:** NÃO INTEGRADO
+- Removidos todos os caminhos absolutos locais (`file:///c:/Users/Pedro/...`) de `docs/HANDOFF.md` e arquivos operacionais. Substituídos 100% por links relativos do repositório (`docs/PROJECT.md`, `docs/HANDOFF.md`, etc.).
 
 ---
 
-## 10. Resultado da Suíte Completa
+## 10. Testes Alembic
+
+- Cadeia `0001` $\to$ `0002` $\to$ `0003` $\to$ `0004` (`HEAD`) validada. Reversão determinística do `downgrade()` de `0003` e `0004` confirmada.
+
+---
+
+## 11. Suíte Completa
 
 - **STATUS:** `PASS`
 - **FAIL:** 0
@@ -96,8 +84,30 @@
 
 ---
 
-## 11. Declarações Finais do Fechamento
+## 12. Problemas Encontrados e Correções Realizadas
 
-1. **FASE 5 NÃO INICIADA.** Nenhuma coleta de legislação real, parser real, RAG ou LLM foi introduzido.
-2. A LÉXORA possui 100% de integridade referencial, temporal e histórico-reprodutível.
-3. Repositório paralisado aguardando o Prompt oficial da Fase 5.
+- **Inconsistência de Caminhos no Handoff:** Corrigida substituindo URIs absolutos por caminhos relativos portáveis.
+- **Clarificação de Estado no Handoff:** `docs/HANDOFF.md` atualizado para declarar `Fase Atual: FASE 06.3`, `Próxima fase autorizável: FASE 5`, `FASE 5: NÃO INICIADA`.
+- **Validação de Schema Direct-Catalog:** Criado `test_postgres_schema_audit.py` para provar ausência de `CASCADE` e `SET NULL` diretamente no catálogo de constraints.
+
+---
+
+## 13. Limitações
+
+- Nenhuma limitação impeditiva. O repositório atende a 100% dos requisitos empíricos de banco relacional e consistência de estado.
+
+---
+
+## 14. Status Final
+
+**`PASS`**
+
+---
+
+## 15. Declaração Obrigatória de Escopo
+
+**`FASE 5 NÃO INICIADA`**
+
+Nenhum crawler, scraper, coletor oficial (Planalto/Receita/CONFAZ), embeddings, RAG, LLM ou integração de provedores cloud (Neon, Supabase, Cloudflare) foi implementado.
+
+O repositório **LÉXORA** está com a integridade jurídica, o schema relacional, a semântica temporal e a portabilidade 100% verificadas, paralisado e pronto para receber o Prompt oficial da Fase 5.

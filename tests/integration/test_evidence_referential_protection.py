@@ -1,4 +1,5 @@
 from datetime import date
+import os
 import pytest
 import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
@@ -11,15 +12,20 @@ from src.infrastructure.db.models.legal_node_model import LegalNodeModel
 from src.infrastructure.db.models.legal_version_model import LegalVersionModel
 from src.infrastructure.db.models.source_model import SourceModel
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Suporte a ambiente Dual: PostgreSQL como teste autoritativo, SQLite como auxiliar rápido
+DEFAULT_TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
 @pytest_asyncio.fixture
 async def db_session():
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    """Fixture de sessão para teste de integridade referencial em banco de dados."""
+    engine = create_async_engine(DEFAULT_TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
-        # Habilita suporte a Foreign Keys no SQLite para testes de integridade referencial
-        await conn.execute(Base.metadata.create_all)
+        # Se for SQLite, habilita PRAGMA foreign_keys = ON
+        if "sqlite" in DEFAULT_TEST_DB_URL:
+            from sqlalchemy import text
+            await conn.execute(text("PRAGMA foreign_keys = ON;"))
+        await conn.run_sync(Base.metadata.create_all)
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
     async with session_factory() as session:
@@ -33,9 +39,9 @@ async def db_session():
 @pytest.mark.asyncio
 async def test_evidence_referential_integrity_blocks_deletion(db_session: AsyncSession):
     """
-    TESTE DE INTEGRIDADE REFERENCIAL DE EVIDÊNCIA:
+    TESTE DE INTEGRIDADE REFERENCIAL DE EVIDÊNCIA EM BANCO DE DADOS REAL:
     Garante que tentar excluir um LegalDocument, LegalVersion ou LegalNode vinculado a uma Evidence
-    é REJEITADO com erro de RESTRICT, impedindo a perda silenciosa da proveniência jurídica.
+    é REJEITADO com erro de RESTRICT (IntegrityError), impedindo a perda silenciosa da proveniência jurídica.
     """
     source = SourceModel(id="src-1", name="Planalto", base_url="https://planalto.gov.br")
     db_session.add(source)
@@ -68,22 +74,21 @@ async def test_evidence_referential_integrity_blocks_deletion(db_session: AsyncS
     db_session.add(evidence)
     await db_session.commit()
 
-    # 1. Tentar excluir a Evidence referenciando a fonte
-    # 2. Tentar excluir a LegalDocument referenciada pela Evidence
+    # 1. Tentar excluir a LegalDocument referenciada pela Evidence -> Deve falhar com IntegrityError (RESTRICT)
     await db_session.delete(doc)
     with pytest.raises(IntegrityError):
         await db_session.commit()
 
     await db_session.rollback()
 
-    # 3. Tentar excluir a LegalVersion referenciada pela Evidence
+    # 2. Tentar excluir a LegalVersion referenciada pela Evidence -> Deve falhar com IntegrityError (RESTRICT)
     await db_session.delete(ver)
     with pytest.raises(IntegrityError):
         await db_session.commit()
 
     await db_session.rollback()
 
-    # 4. Tentar excluir o LegalNode referenciado pela Evidence
+    # 3. Tentar excluir o LegalNode referenciado pela Evidence -> Deve falhar com IntegrityError (RESTRICT)
     await db_session.delete(node)
     with pytest.raises(IntegrityError):
         await db_session.commit()

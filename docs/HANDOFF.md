@@ -4,33 +4,42 @@ Este documento orienta novos agentes de IA e desenvolvedores sobre como assumir 
 
 ---
 
-# 1. Instruções para Início de Turno (Start Protocol)
+# 1. Status do Projeto
 
-Siga o checklist do [.agents/workflows/start_session.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/workflows/start_session.md) e leia na seguinte ordem:
+- **Fase Atual:** FASE 06.3 — PostgreSQL Reality & State Consistency Gate
+- **Versão Atual:** `v0.6.4-integrity-verification`
+- **Próxima Fase Autorizável:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real Brasileira
+- **Status da FASE 5:** **`NÃO INICIADA`** (Aguardando Prompt 07 / Fase 5)
 
-1. [README.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/README.md)
-2. [docs/PROJECT.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/PROJECT.md)
-3. [docs/PROJECT_MEMORY.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/PROJECT_MEMORY.md)
-4. [docs/AGENT_PROTOCOL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/AGENT_PROTOCOL.md)
-5. [docs/CURRENT_STATE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/CURRENT_STATE.md)
-6. [docs/HANDOFF.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/HANDOFF.md)
-7. [docs/LEGAL_INTEGRITY_HARDENING_REPORT.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY_HARDENING_REPORT.md)
-8. [docs/LEGAL_INTEGRITY_HARDENING.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY_HARDENING.md)
-9. [docs/TEMPORAL_LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/TEMPORAL_LEGAL_MODEL.md)
-10. [docs/SOURCE_GOVERNANCE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/SOURCE_GOVERNANCE.md)
-11. [docs/ACQUISITION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/ACQUISITION.md)
-12. [docs/RAW_ARTIFACTS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/RAW_ARTIFACTS.md)
-13. [docs/INGESTION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/INGESTION.md)
-14. [docs/LEGAL_INTEGRITY.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY.md)
-15. [docs/LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_MODEL.md)
-16. [docs/DATABASE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DATABASE.md)
-17. [docs/DECISIONS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DECISIONS.md) e arquivos em [docs/adr/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/adr/)
-18. Regras em [.agents/rules/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/)
+---
+
+# 2. Instruções para Início de Turno (Start Protocol)
+
+Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start_session.md) e leia na seguinte ordem:
+
+1. [README.md](README.md)
+2. [docs/PROJECT.md](docs/PROJECT.md)
+3. [docs/PROJECT_MEMORY.md](docs/PROJECT_MEMORY.md)
+4. [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md)
+5. [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
+6. [docs/HANDOFF.md](docs/HANDOFF.md)
+7. [docs/LEGAL_INTEGRITY_HARDENING_REPORT.md](docs/LEGAL_INTEGRITY_HARDENING_REPORT.md)
+8. [docs/LEGAL_INTEGRITY_HARDENING.md](docs/LEGAL_INTEGRITY_HARDENING.md)
+9. [docs/TEMPORAL_LEGAL_MODEL.md](docs/TEMPORAL_LEGAL_MODEL.md)
+10. [docs/SOURCE_GOVERNANCE.md](docs/SOURCE_GOVERNANCE.md)
+11. [docs/ACQUISITION.md](docs/ACQUISITION.md)
+12. [docs/RAW_ARTIFACTS.md](docs/RAW_ARTIFACTS.md)
+13. [docs/INGESTION.md](docs/INGESTION.md)
+14. [docs/LEGAL_INTEGRITY.md](docs/LEGAL_INTEGRITY.md)
+15. [docs/LEGAL_MODEL.md](docs/LEGAL_MODEL.md)
+16. [docs/DATABASE.md](docs/DATABASE.md)
+17. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
+18. Regras em [.agents/rules/](.agents/rules/)
 19. Código em `src/` e testes em `tests/`.
 
 ---
 
-# 2. Checklist de Finalização de Tarefa (End Protocol)
+# 3. Checklist de Finalização de Tarefa (End Protocol)
 
 - [ ] Executar testes unitários e de integração (`pytest`);
 - [ ] Atualizar `docs/CHANGELOG.md`;
@@ -41,10 +50,10 @@ Siga o checklist do [.agents/workflows/start_session.md](file:///c:/Users/Pedro/
 
 ---
 
-# 3. Próximo Passo Prioritário
+# 4. Próxima Tarefa Prioritária
 
-**Fase Atual:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real Brasileira  
-**Versão Atual:** `v0.6.3-final-integrity-closure`  
+**Próxima Fase:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real Brasileira  
+**Versão:** `v0.6.4-integrity-verification` (Gate 06.3 Concluído)  
 **Tarefa Imediata:** 
 1. Implementar os conectores de leitura sintética/mock para atuar sobre a estrutura da Constituição Federal e Leis Complementares;
 2. Desenvolver os parsers normativos capazes de extrair a hierarquia real de artigos, parágrafos, incisos e alíneas;

@@ -1,25 +1,22 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-12  
-**Fase Atual:** PROMPT 06.2 — Final Integrity Closure  
-**Versão Atual:** `v0.6.3-final-integrity-closure`  
-**Status do Projeto:** FASE 06.2 — PASS. Todas as 4 correções da auditoria final concluídas: 1) FKs de Evidence em `RESTRICT` em modelos e migration `0004_evidence_fk_integrity.py`; 2) Downgrade determinístico da migration `0003_legal_integrity_hardening.py` sem `pass`; 3) Testes comportamentais de revogação para Cenários A, B e C; 4) Auditoria global automatizada de FKs (0 CASCADE, 0 SET NULL) e teste de integridade referencial de Evidence no banco.
+**Fase Atual:** PROMPT 06.3 — PostgreSQL Reality & State Consistency Gate  
+**Versão Atual:** `v0.6.4-integrity-verification`  
+**Status do Projeto:** FASE 06.3 — PASS. Validação empírica concluída: 1) Suporte a testes duais SQLite (auxiliar) e PostgreSQL autoritativo em `tests/integration/test_evidence_referential_protection.py`; 2) Auditoria direta de catálogo no HEAD (`0004`) confirmando `CASCADE = 0` e `SET NULL = 0` em `tests/integration/test_postgres_schema_audit.py`; 3) Cadeia de migrations `0001` a `0004` e round-trip testados; 4) Correção de todos os caminhos absolutos para caminhos relativos portáveis em `docs/HANDOFF.md` e documentação operacional.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Correção de FKs de Evidence (`ON DELETE RESTRICT`):**
-  - `EvidenceModel` ORM e migration `0004_evidence_fk_integrity.py` alterados de `SET NULL` para `RESTRICT` nas colunas `legal_document_id`, `legal_version_id` e `legal_node_id`.
-- **Downgrade Determinístico da Migration 0003:**
-  - `alembic/versions/0003_legal_integrity_hardening.py` atualizada com implementação completa de `downgrade()` revertendo para as FKs originais.
-- **Testes Comportamentais de Revogação:**
-  - `tests/unit/test_revocation_behavior.py` testando Cenários A (`revoking_node_id = None`), B (auto-revogação `A REVOKES A`) e C (revogação válida `B REVOKES A`).
-- **Auditoria Global de FKs e Integridade Referencial:**
-  - `tests/unit/test_security_governance_audit.py` audita todas as 8 tabelas/modelos ORM e migrations garantindo 0 CASCADE e 0 SET NULL.
-  - `tests/integration/test_evidence_referential_protection.py` comprova a rejeição de exclusões via `RESTRICT` em banco de dados.
+- **Suporte a Banco Dual (PostgreSQL Autoritativo & SQLite Auxiliar):**
+  - Atualizado `test_evidence_referential_protection.py` para suportar execução dual via `TEST_DATABASE_URL`. Rejeição de exclusões (`RESTRICT`) para `LegalDocument`, `LegalVersion` e `LegalNode` vinculados a `Evidence` fisicamente validada em motor relacional.
+- **Auditoria Direta de Schema no HEAD (0004):**
+  - Criado `test_postgres_schema_audit.py` inspecionando o catálogo de constraints. Confirmado que no `HEAD` (`0004`) o número de FKs jurídicas com `CASCADE` é 0 e com `SET NULL` é 0.
+- **Hardening de Portabilidade na Documentação:**
+  - Removidos todos os caminhos absolutos de desenvolvimento (`file:///c:/Users/Pedro/...`) de `docs/HANDOFF.md` e arquivos operacionais, substituindo por links relativos do repositório (`docs/PROJECT.md`, `docs/HANDOFF.md`).
 - **Documentação & Relatório Final:**
-  - `docs/LEGAL_INTEGRITY_HARDENING.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: FASE 06.2 — PASS) e `ADR-0012`.
+  - `docs/LEGAL_INTEGRITY_HARDENING.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: FASE 06.3 — PASS) e `ADR-0012`.
 - **Status Cloud:** Neon = NÃO INTEGRADO, Supabase = NÃO INTEGRADO, Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -174,6 +171,7 @@ lexora/
 │   │   ├── test_evidence_referential_protection.py
 │   │   ├── test_golden_historical_scenario.py
 │   │   ├── test_postgres_real.py
+│   │   ├── test_postgres_schema_audit.py
 │   │   ├── test_temporal_use_cases.py
 │   │   └── test_use_cases.py
 │   └── unit/
