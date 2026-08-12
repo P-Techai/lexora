@@ -1,65 +1,116 @@
-# LÉXORA — Roadmap do Projeto
+# LÉXORA — Roadmap Oficial do Projeto (Fases 0 a 15)
 
-O desenvolvimento do **LÉXORA (LXR)** é organizado em marcos incrementais. Cada marco deve entregar um conjunto funcional completo com testes e documentação atualizada.
-
----
-
-# Marco 1: NEXUS FISCAL BR — FOUNDATION (Em Execução)
-**Objetivo:** Estabelecer a fundação documental, governança de agentes, arquitetura modular de software e infraestrutura inicial plugável.
-
-- [x] Estrutura de diretórios organizada (`.agents/`, `docs/`, `specs/`, `infrastructure/`, `src/`, `tests/`);
-- [x] Memória permanente criada (`PROJECT.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `CURRENT_STATE.md`, `HANDOFF.md`, `DECISIONS.md`, `CHANGELOG.md`);
-- [x] Regras e workflows de governança para agentes de IA (`.agents/rules/`, `.agents/workflows/`);
-- [x] Especificações técnicas dos domínios (`specs/`);
-- [x] Abstrações de infraestrutura (`StorageProvider`, `DatabaseProvider`, `LLMProvider`, `RetrievalPorts`);
-- [x] Implementação inicial de modelos de domínio (`LegalNode`, `TaxCalculation`);
-- [x] Setup do ambiente local (`docker-compose.yml`, `pyproject.toml`, `requirements.txt`, `.env.example`);
-- [x] Suite de testes unitários iniciais passando.
+O desenvolvimento do **LÉXORA (LXR)** segue 16 fases estritas. É expressamente proibido antecipar fases sem que o modelo da fase anterior esteja consolidado.
 
 ---
 
-# Marco 2: INGESTÃO E VERSIONAMENTO JURÍDICO
-**Objetivo:** Construir o pipeline de ingestão e estruturação canônica de legislação com controle de vigência.
-
-- [ ] Pipeline de Ingestão: `DISCOVERY` → `DOWNLOAD` → `HASH` → `RAW_STORAGE` → `PARSER` → `NORMALIZATION` → `STRUCTURE` → `RELATIONS` → `EMBEDDINGS` → `VALIDATION` → `PUBLICATION`;
-- [ ] Parsers para legislação federal (Constituição, Código Tributário Nacional, Leis Complementares, Leis Ordinárias);
-- [ ] Grafo de Relações Normativas (`AMENDS`, `REVOKES`, `REGULATES`, `REFERENCES`);
-- [ ] Tabela de versionamento temporal (`effective_from`, `effective_until`).
-
----
-
-# Marco 3: RETRIEVAL JURÍDICO HÍBRIDO (RAG FISCAL)
-**Objetivo:** Implementar o mecanismo de recuperação de conhecimento normativo com fundamentação legal rastreável.
-
-- [ ] Engine de busca híbrida: Busca Lexical (BM25) + Busca Vetorial (`pgvector`);
-- [ ] Filtro temporal obrigatório por data da operação fiscal;
-- [ ] Reordenador hierárquico (Legal Reranker);
-- [ ] Estruturador de respostas jurídicas (Conclusão, Base Legal, Interpretação, Vigência, Ressalvas, Fontes).
+# FASE 0: Constituição e Fundação
+**Status:** [x] Concluída
+- [x] Repositório estruturado em Clean Architecture;
+- [x] Memória permanente criada (`PROJECT_MEMORY.md`, `AGENT_PROTOCOL.md`, `PROJECT.md`, `ARCHITECTURE.md`);
+- [x] Diretório de ADRs estabelecido (`docs/adr/ADR-0001` a `ADR-0006`);
+- [x] Regras de IA e workflows invioláveis em `.agents/`;
+- [x] Especificações técnicas dos domínios em `specs/`;
+- [x] Modelos purificados e portas de abstração em `src/`;
+- [x] Suite de testes unitários básicos em `tests/`.
 
 ---
 
-# Marco 4: MOTOR FISCAL E CÁLCULO DETERMINÍSTICO
-**Objetivo:** Desenvolver o enquadramento de regras fiscais e o motor de cálculo tributário de alta precisão.
-
-- [ ] Mapeamento determinístico de NCM, CEST, CST, CSOSN, CFOP;
-- [ ] Motor de cálculo para ICMS, IPI, PIS, COFINS, ISS;
-- [ ] Geração de memória de cálculo detalhada (`TaxCalculationLog`);
-- [ ] Identificação de Códigos de Receita de Arrecadação (DARF).
-
----
-
-# Marco 5: PARSER DE NF-e E REVISÃO HUMANA
-**Objetivo:** Leitura de XMLs fiscais e roteamento inteligente para auditoria/revisão humana.
-
-- [ ] Parser e validador de XML de NF-e;
-- [ ] Algoritmo de Pontuação de Confiança (Confidence Score) baseado em evidências jurídicas e integridade de dados;
-- [ ] Fila de Revisão Humana (Human Review Queue) com segregação de conhecimento corporativo (`Company Knowledge`) vs. conhecimento legal (`Legal Knowledge`).
+# FASE 1: Infraestrutura
+**Status:** [ ] Próxima Fase
+- [ ] Schema ORM SQLAlchemy para `legal_nodes` e `legal_relations` no PostgreSQL (`pgvector`);
+- [ ] Migrations do Alembic configuradas;
+- [ ] Configuração de adaptadores para Supabase, Cloudflare R2 e Neon;
+- [ ] Pipeline de CI/CD via GitHub Actions.
 
 ---
 
-# Marco 6: MÓDULO DA REFORMA TRIBUTÁRIA
-**Objetivo:** Suporte ao regime dual de transição da Reforma Tributária brasileira.
+# FASE 2: Modelo Jurídico
+**Status:** [ ] Planejada
+- [ ] Modelagem canônica dos tipos de norma e nós hierárquicos (`LegalNode`);
+- [ ] Validações de integridade e calculadores de hash de documento.
 
-- [ ] Modelo de dados para CBS, IBS e Imposto Seletivo (IS);
-- [ ] Cronograma de transição de alíquotas e aproveitamento de créditos;
-- [ ] Simulação de cenários: "Como é hoje" vs. "Como será na data X".
+---
+
+# FASE 3: Ingestão Oficial
+**Status:** [ ] Planejada
+- [ ] Ingestão de fontes primárias oficiais (Planalto, Receita Federal, CONFAZ);
+- [ ] Armazenamento *raw* no Cloudflare R2 com hash de integridade;
+- [ ] Parsers de estrutura para Constituição, LCs e LOs.
+
+---
+
+# FASE 4: Versionamento e Vigência
+**Status:** [ ] Planejada
+- [ ] Controle temporal estrito (`effective_from`, `effective_until`);
+- [ ] Grafo de relações normativas (`AMENDS`, `REVOKES`, `REGULATES`);
+- [ ] Motor de consulta temporal por data da operação fiscal.
+
+---
+
+# FASE 5: RAG Híbrido
+**Status:** [ ] Planejada
+- [ ] Engine de busca híbrida: Busca Lexical (BM25) + Vetorial (`pgvector`);
+- [ ] Filtro temporal obrigatório e reordenador por hierarquia jurídica (*Legal Reranker*).
+
+---
+
+# FASE 6: Legal Reasoning Engine
+**Status:** [ ] Planejada
+- [ ] Grafo de raciocínio jurídico e resolução de conflitos (Constituição > LC > LO > Decreto);
+- [ ] Identificação automatizada de ambiguidades e lacunas normativas.
+
+---
+
+# FASE 7: Fiscal Rule Engine
+**Status:** [ ] Planejada
+- [ ] Enquadramento determinístico de NCM, CEST, CST, CSOSN e CFOP.
+
+---
+
+# FASE 8: NF-e / XML
+**Status:** [ ] Planejada
+- [ ] Pipeline de ingestão, validação de schema e extração de itens de XML de NF-e.
+
+---
+
+# FASE 9: Classificação Fiscal
+**Status:** [ ] Planejada
+- [ ] Algoritmo de Pontuação de Confiança (*Confidence Score*) e classificação assistida de produtos.
+
+---
+
+# FASE 10: Cálculos e Memória
+**Status:** [ ] Planejada
+- [ ] Motor de cálculo tributário determinístico puro (`Decimal`) com geração de `TaxMemoryLog` auditável.
+
+---
+
+# FASE 11: Human Review
+**Status:** [ ] Planejada
+- [ ] Fila de revisão humana para tratamento de exceções, ambiguidades e produtos complexos;
+- [ ] Segregação de `Company Knowledge` vs. `Legal Knowledge`.
+
+---
+
+# FASE 12: Monitoramento Legislativo
+**Status:** [ ] Planejada
+- [ ] Acompanhamento de alterações no Diário Oficial e alertas de revogação/alteração.
+
+---
+
+# FASE 13: Reforma Tributária
+**Status:** [ ] Planejada
+- [ ] Suporte ao regime dual (CBS, IBS, IS vs PIS/COFINS/ICMS/ISS) e simulação de cenários de transição.
+
+---
+
+# FASE 14: Expansão Estadual
+**Status:** [ ] Planejada
+- [ ] Ingestão e regras específicas dos 27 estados e principais municípios brasileiros.
+
+---
+
+# FASE 15: Produção
+**Status:** [ ] Planejada
+- [ ] Endurecimento de segurança (RLS/RBAC), observabilidade, auditoria completa e escala de infraestrutura.

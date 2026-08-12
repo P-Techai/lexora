@@ -1,49 +1,48 @@
 # LÉXORA — Handoff do Projeto
 
-Este documento instrui desenvolvedores e agentes de IA sobre como assumir a continuidade do projeto **LÉXORA (LXR)** sem perda de contexto ou decisões arquiteturais.
+Este documento orienta novos agentes de IA e desenvolvedores sobre como assumir o projeto **LÉXORA (LXR)** sem perda de contexto ou violação da Constituição.
 
 ---
 
-# 1. Instruções para Início de Turno / Nova Sessão
+# 1. Instruções para Início de Turno (Start Protocol)
 
-Antes de realizar qualquer modificação no código:
+Siga o checklist do [.agents/workflows/start_session.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/workflows/start_session.md) e leia na seguinte ordem:
 
-1. **Leia a memória permanente:**
-   - [PROJECT.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/PROJECT.md) — Visão e Princípios;
-   - [ARCHITECTURE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/ARCHITECTURE.md) — Arquitetura de 4 camadas;
-   - [CURRENT_STATE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/CURRENT_STATE.md) — Estado atual do projeto;
-   - [DECISIONS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DECISIONS.md) — Decisões arquiteturais registradas;
-   - [ROADMAP.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/ROADMAP.md) — Marcos e entregas.
-
-2. **Verifique as regras do agente:**
-   - [.agents/rules/01_legal_truth.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/01_legal_truth.md)
-   - [.agents/rules/02_architecture_portability.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/02_architecture_portability.md)
-   - [.agents/rules/03_calculation_determinism.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/03_calculation_determinism.md)
-   - [.agents/rules/04_handoff_documentation.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/04_handoff_documentation.md)
-
-3. **Verifique a saúde do ambiente:**
-   - Execute a suite de testes unitários: `pytest`
-   - Certifique-se de que a árvore de diretórios está íntegra.
+1. [README.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/README.md)
+2. [docs/PROJECT.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/PROJECT.md)
+3. [docs/PROJECT_MEMORY.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/PROJECT_MEMORY.md)
+4. [docs/AGENT_PROTOCOL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/AGENT_PROTOCOL.md)
+5. [docs/CURRENT_STATE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/CURRENT_STATE.md)
+6. [docs/HANDOFF.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/HANDOFF.md)
+7. [docs/TEMPORAL_LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/TEMPORAL_LEGAL_MODEL.md)
+8. [docs/SOURCE_GOVERNANCE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/SOURCE_GOVERNANCE.md)
+9. [docs/ACQUISITION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/ACQUISITION.md)
+10. [docs/RAW_ARTIFACTS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/RAW_ARTIFACTS.md)
+11. [docs/INGESTION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/INGESTION.md)
+12. [docs/LEGAL_INTEGRITY.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY.md)
+13. [docs/LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_MODEL.md)
+14. [docs/DATABASE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DATABASE.md)
+15. [docs/DECISIONS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DECISIONS.md) e arquivos em [docs/adr/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/adr/)
+16. Regras em [.agents/rules/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/)
+17. Código em `src/` e testes em `tests/`.
 
 ---
 
-# 2. Checklist Obrigatório de Finalização de Tarefa
+# 2. Checklist de Finalização de Tarefa (End Protocol)
 
-Ao concluir qualquer tarefa significativa:
-
-- [ ] **Testes:** Garanta que todos os testes unitários e de integração existentes continuam passando sem regressão;
-- [ ] **Novos Testes:** Adicione testes automatizados para a funcionalidade criada;
-- [ ] **Documentação:** Atualize `docs/CURRENT_STATE.md` com a árvore atualizada, novos arquivos e testes executados;
-- [ ] **Decisões:** Se uma decisão arquitetural foi tomada, registe um novo ADR em `docs/DECISIONS.md`;
-- [ ] **Histórico:** Registre a alteração em `docs/CHANGELOG.md`;
-- [ ] **Handoff:** Atualize este arquivo (`docs/HANDOFF.md`) com a indicação exata da próxima tarefa.
+- [ ] Executar testes unitários e de integração (`pytest`);
+- [ ] Atualizar `docs/CHANGELOG.md`;
+- [ ] Atualizar `docs/CURRENT_STATE.md`;
+- [ ] Atualizar `docs/HANDOFF.md` com o próximo passo prioritário;
+- [ ] Criar novo ADR em `docs/adr/` se uma decisão arquitetural foi tomada;
+- [ ] Apresentar o Relatório Final com os itens obrigatórios da entrega.
 
 ---
 
 # 3. Próximo Passo Prioritário
 
-**Marco Atual:** Marco 2 — Ingestão e Versionamento Jurídico.  
+**Fase Atual:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real  
 **Tarefa Imediata:** 
-1. Criar o modelo ORM SQLAlchemy (`src/infrastructure/db/models/legal_node_model.py`) correspondente à entidade de domínio `LegalNode`;
-2. Configurar a migration Alembic inicial para PostgreSQL com extensão `pgvector`;
-3. Desenvolver o parser de ingestão para normas primárias federais (ex.: Constituição Federal / Código Tributário Nacional).
+1. Implementar o conector de leitura sintética/mock para atuar sobre a estrutura da Constituição Federal e Leis Complementares;
+2. Desenvolver os parsers normativos capazes de extrair a hierarquia real de artigos, parágrafos, incisos e alíneas;
+3. Integrar a ingestão oficial com o pipeline determinístico e temporal construído nas Fases 1-4.

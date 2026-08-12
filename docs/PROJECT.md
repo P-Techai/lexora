@@ -1,87 +1,87 @@
 # LÉXORA — Visão Geral do Projeto
 
 **Nome Oficial:** LÉXORA  
+**Pronúncia:** LÉK-so-ra  
 **Sigla:** LXR  
 **Nome Técnico:** `lexora`  
-**Descrição:** Plataforma inteligente de conhecimento jurídico, tributário e contábil brasileiro.
+**Posicionamento:** Inteligência jurídica, fiscal e tributária brasileira.
 
 ---
 
-# 1. Visão e Filosofia
+# 1. Princípios da Marca e Operacionais
 
-O LÉXORA não é um protótipo descartável nem um simples chatbot. É uma plataforma modular de software de longo prazo capaz de:
-
-1. Consultar legislação brasileira com fundamentação jurídica exata;
-2. Realizar cruzamentos entre normas;
-3. Respeitar hierarquia jurídica, competência, especialidade e vigência temporal;
-4. Responder sempre apontando artigos, dispositivos e fontes oficiais primárias;
-5. Acompanhar alterações legislativas mantendo histórico de versões;
-6. Classificar produtos e operações fiscais;
-7. Interpretar arquivos NF-e (XML);
-8. Sugerir NCM, CEST, CST, CSOSN e CFOP;
-9. Calcular tributos de forma determinística;
-10. Gerar memória de cálculo auditável;
-11. Identificar códigos de receita;
-12. Permitir revisão humana estruturada;
-13. Aprender com decisões operacionais sem alterar a verdade jurídica;
-14. Acompanhar e simular a Reforma Tributária (dualidade CBS/IBS/IS vs. PIS/COFINS/ICMS/ISS);
-15. Operar com custo zero em infraestrutura gratuita (free-tier first) e migrar para infraestrutura paga sem reescrever o código.
+- **Princípio da Marca:** "Inteligência que encontra a base."
+- **Princípio Operacional:** "A Léxora não inventa. Ela encontra, cruza, interpreta e demonstra."
 
 ---
 
-# 2. Princípio Fundamental de Separação de Camadas
+# 2. Personalidade da Léxora
 
-A arquitetura do LÉXORA proíbe misturar responsabilidades. Cada componente tem um propósito bem definido:
+A Léxora é uma plataforma profissional de conhecimento que atua com a seguinte personalidade:
+- **Técnica, objetiva e precisa;**
+- **Fundamentada em fontes oficiais primárias;**
+- **Transparente e auditável;**
+- **Conservadora em decisões fiscais;**
+- **Humilde e clara diante da incerteza.**
 
-| Tecnologia | Responsabilidade |
-| :--- | :--- |
-| **RAG Híbrido** | Recuperação semântica e lexical de conhecimento normativo |
-| **PostgreSQL** | Fatos estruturados, transações, dados cadastrais e logs auditáveis |
-| **pgvector** | Armazenamento e busca por vetores de simetria semântica |
-| **Legal Knowledge Graph** | Mapeamento de relações entre normas (altera, revoga, regulamenta, etc.) |
-| **Rule Engine** | Tomada de decisão fiscal determinística |
-| **Calculation Engine** | Motor de cálculo tributário financeiro de alta precisão |
-| **LLM (Orquestrador)** | Interpretação de texto, extração de metadados, classificação assistida e síntese |
-| **Human Review** | Exceções, ambiguidades e validações de alto impacto |
+A Léxora **NÃO** finge certeza, não inventa artigos/alíquotas/vigências e não substitui a revisão humana em casos de evidência insuficiente.
 
 ---
 
-# 3. Regra de Ouro: A Verdade Jurídica
+# 3. Princípio de Confiabilidade (Escala de 5 Níveis)
+
+Toda informação relevante emitida pela Léxora é enquadrada em um dos 5 níveis:
+1. `CERTEZA`: Dispositivo normativo vigente correspondente com fundamentação direta.
+2. `PROVÁVEL`: Correspondência de alta qualidade sustentada por orientação oficial.
+3. `INCERTA`: Legislação com lacuna ou ambiguidade documental identificada.
+4. `CONFLITANTE`: Normas divergentes entre competências ou vigências não resolvidas.
+5. `NÃO ENCONTRADA`: Ausência de base legal cadastrada (roteia para Revisão Humana).
+
+---
+
+# 4. Regra de Ouro: A Verdade Jurídica
 
 > [!CRITICAL]
 > **O LLM NÃO É A FONTE DA VERDADE JURÍDICA OU FISCAL.**
-> Nenhuma resposta do LLM pode ser considerada legislação. A verdade jurídica deve advir exclusivamente de:
-> - Fontes oficiais primárias (Planalto, Receita Federal, CONFAZ, STF, STJ, CARF, etc.);
-> - Dispositivo normativo canônico versionado;
-> - Vigência temporal confirmada (`effective_from` e `effective_until`);
-> - Relações normativas rastreáveis e justificativa de regra aplicada.
+> A verdade jurídica provém exclusivamente de fontes oficiais primárias (Planalto, Receita Federal, CONFAZ, STF, STJ, CARF, etc.), dispositivos normativos canônicos versionados (`LegalNode`), controle estrito de vigência e relações normativas rastreáveis.
 
 ---
 
-# 4. Infraestrutura e Portabilidade
+# 5. Estrutura em Dois Cérebros e Decision Engine
 
-- **Fase Inicial:** 100% hospedada em camadas gratuitas (Free Tier First):
-  - **Supabase / Neon:** PostgreSQL + `pgvector` + Autenticação;
-  - **Cloudflare:** R2 (storage compatível S3), Workers, DNS, CDN;
-  - **Execução local/Docker:** Desenvolvimento e testes isolados.
-- **Portabilidade Total:** Lógica de negócio 100% desacoplada de SDKs proprietários via Design Pattern **Ports & Adapters** (Clean Architecture / Hexagonal Architecture).
+```
+               +----------------------------------------+
+               |             DECISION ENGINE            |
+               | (Sintetizador & Julgamento de Certeza) |
+               +-------------------+--------------------+
+                                   |
+         +-------------------------+-------------------------+
+         |                                                   |
++--------v-------+                                  +--------v-------+
+|   LEGAL BRAIN  |                                  |  FISCAL BRAIN  |
+|  (Legislação,  |                                  |   (Produtos,   |
+|   Vigência,    |                                  |   NCM, CST,    |
+|   Hierarquia)  |                                  |   Cálculos)    |
++----------------+                                  +----------------+
+```
 
 ---
 
-# 5. Organização do Repositório
+# 6. Organização do Repositório
 
 ```
 lexora/
-├── .agents/             # Regras e workflows de IA/Agentes
+├── .agents/             # Regras e workflows invioláveis de IA/Agentes
 │   ├── rules/
 │   └── workflows/
-├── docs/                # Memória permanente do projeto
-├── specs/               # Especificações técnicas de domínio
-├── infrastructure/      # Docker, IaC e scripts de implantação
+├── docs/                # Memória permanente condensada e ADRs
+│   └── adr/
+├── specs/               # Especificações técnicas dos domínios
+├── infrastructure/      # Docker, IaC e estratégias de provedor
 ├── src/                 # Código-fonte da aplicação (Clean Architecture)
-│   ├── domain/          # Entidades, Value Objects e Regras de Negócio
-│   ├── application/     # Interfaces/Ports e Casos de Uso
-│   ├── infrastructure/  # Adaptadores concretos (Supabase, R2, LLMs)
+│   ├── domain/          # Entidades, Value Objects e Regras
+│   ├── application/     # Ports (Interfaces) e Casos de Uso
+│   ├── infrastructure/  # Adaptadores concretos (SQLAlchemy, Cloudflare, LLM)
 │   └── interfaces/      # APIs FastAPI e CLI
-└── tests/               # Testes unitários, de integração e fixtures
+└── tests/               # Suite de testes unitários e de integração
 ```

@@ -1,40 +1,18 @@
-# Regra de Agente: 01 — Verdade Jurídica e Rastreadilidade (Legal Truth Rule)
-
-> [!CRITICAL]
-> **ESTA É UMA REGRA FUNDAMENTAL E INVIOLÁVEL DO PROJETO LÉXORA.**
+# Regra de Agente: 01 — Princípio da Verdade Jurídica Temporal
 
 ---
 
-# 1. Princípio da Verdade Jurídica
+# 1. Verdade Jurídica
 
-1. **O LLM NÃO É A FONTE DA VERDADE JURÍDICA OU FISCAL.**
-2. O sistema jamais tratará uma resposta ou geração do LLM como texto normativo ou legislação válida.
-3. A verdade jurídica reside exclusivamente em:
-   - Fontes primárias oficiais (Diário Oficial da União, Planalto, Receita Federal, CONFAZ, STF, STJ, CARF, Secretarias de Fazenda);
-   - Dispositivos normativos canônicos cadastrados na base de dados (`LegalNode`);
-   - Controle temporal explícito de vigência (`effective_from` e `effective_until`);
-   - Relações normativas rastreáveis (`AMENDS`, `REVOKES`, `REGULATES`).
+A Verdade Jurídica no **LÉXORA (LXR)** é intrinsecamente **TEMPORAL** e reside estritamente em dispositivos normativos (`LegalNode`) e versões históricas (`LegalVersion`) fundadas em fontes primárias.
 
 ---
 
-# 2. Requisitos de Fundamentação Obrigatórios
+# 2. Princípios Invioláveis de Tempo e Vigência
 
-Toda resposta jurídica ou fiscal relevante do sistema deve conseguir responder com evidência factual:
-
-- Qual a norma aplicável? (Ex.: Lei Complementar nº 87/1996)
-- Qual o artigo específico? (Ex.: Art. 3º)
-- Qual o parágrafo / inciso / alínea / item? (Ex.: Inciso VIII)
-- Qual a versão da norma vigente na data da operação fiscal?
-- Qual a fonte oficial do documento?
-- Qual a relação da norma com outros diplomas legais existentes?
-- Qual a regra de conflito / hierarquia aplicada?
-- Existe ambiguidade ou incerteza detectada?
-
----
-
-# 3. Restrições Estritas para Agentes de IA
-
-- **NUNCA** invente ou alucine citações de artigos, incisos ou alíneas.
-- **NUNCA** crie regras tributárias "prováveis" sem respaldo normativo direto.
-- **NUNCA** altere a verdade jurídica oficial com base em decisões humanas operacionais da empresa. Mantenha estritamente segregado `Legal Knowledge` de `Company Knowledge`.
-- Se faltar evidência primária oficial, o sistema DEVE declarar **incerteza legal** ou emitir solicitação de **Revisão Humana**.
+1. **TEMPO É PARTE DA VERDADE JURÍDICA:** O sistema jamais deve responder a uma consulta jurídica ou tributária sem considerar o momento no tempo (data de referência $T$).
+2. **Proibição de `datetime.now()` Implícito:** A data jurídica deve ser sempre explicitada pela aplicação ou pelo caso de uso.
+3. **Quatro Dimensões Temporais:** Distinguir sempre `publication_date`, `effective_from`, `effective_until` e `captured_at`.
+4. **Semântica do Intervalo Semi-Aberto:** Os períodos de vigência adotam a matemática $[effective\_from, effective\_until)$.
+5. **Imutabilidade Histórica & Revogação por Evento:** Revogar uma norma é um evento jurídico que altera a vigência e registra a relação com a evidência responsável. **É EXPRESSAMENTE PROIBIDO EXECUTAR DELETE SQL EM DADOS HISTÓRICOS DE LEGISLAÇÃO.**
+6. **Não-Resolução Silenciosa de Conflitos:** Qualquer sobreposição de vigências (`OVERLAP`) deve produzir o estado `TEMPORAL_CONFLICT`. É proibido usar LLMs ou heurísticas silenciosas para decidir qual norma vigora.
