@@ -1,67 +1,96 @@
 import os
 import pytest
-from sqlalchemy import MetaData
+from alembic.config import Config
+from alembic import command
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-import src.infrastructure.db.models as models
+TEST_DB_URL = os.getenv("TEST_DATABASE_URL")
 
-TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+def apply_alembic_migrations(db_url: str):
+    """Executa alembic upgrade head sobre a URL do banco de dados de teste (NUNCA usa Base.metadata.create_all)."""
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+    command.upgrade(alembic_cfg, "head")
 
 
 @pytest.mark.asyncio
-async def test_postgres_schema_foreign_key_constraints_at_head():
+async def test_postgres_catalog_schema_audit_at_head():
     """
-    AUDITORIA DO SCHEMA OPERACIONAL NO HEAD (MIGRATION 0004):
-    Valida as constraints de Foreign Key no schema do banco de dados relacional.
-    Garante que para o estado atual HEAD (0004):
-    - CASCADE = 0
-    - SET NULL = 0
-    - Todas as FKs de fontes, documentos, versões, nós, relações e evidências usam RESTRICT.
+    AUDITORIA DIRETA DE CATÁLOGO POSTGRESQL NO HEAD (MIGRATION 0004):
+    1. Exige TEST_DATABASE_URL configurada apontando para PostgreSQL real (Sem fallback SQLite!).
+    2. Aplica as migrations via Alembic (`alembic upgrade head`).
+    3. Inspeciona a tabela information_schema.referential_constraints do PostgreSQL.
+    4. Confirma empiricamente no catálogo do banco:
+       - CASCADE = 0
+       - SET NULL = 0
+       - RESTRICT / NO ACTION = Aplicado em 100% das chaves estrangeiras normativas.
     """
-    metadata = MetaData()
+    if not TEST_DB_URL:
+        pytest.fail("TEST_DATABASE_URL não configurada! A auditoria de catálogo PostgreSQL exige TEST_DATABASE_URL.")
+
+    if "postgresql" not in TEST_DB_URL:
+        pytest.fail(f"TEST_DATABASE_URL deve apontar para PostgreSQL real: '{TEST_DB_URL}'")
+
+    # Converter URL para síncrono para execução do Alembic
+    sync_url = TEST_DB_URL.replace("+asyncpg", "")
+    apply_alembic_migrations(sync_url)
+
     engine = create_async_engine(TEST_DB_URL, echo=False)
 
-    async with engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all)
+    catalog_query = text("""
+        SELECT 
+            rc.constraint_name,
+            kcu.table_name,
+            kcu.column_name,
+            kcu.referenced_table_name,
+            rc.delete_rule
+        FROM information_schema.referential_constraints rc
+        JOIN (
+            SELECT 
+                constraint_name, 
+                table_name, 
+                column_name,
+                referenced_table_name = (
+                    SELECT kcu2.table_name 
+                    FROM information_schema.key_column_usage kcu2 
+                    WHERE kcu2.constraint_name = kcu1.constraint_name 
+                    LIMIT 1
+                )
+            FROM information_schema.key_column_usage kcu1
+        ) kcu ON rc.constraint_name = kcu.constraint_name
+    """)
 
-    legal_tables = [
-        models.SourceModel.__tablename__,
-        models.LegalDocumentModel.__tablename__,
-        models.LegalVersionModel.__tablename__,
-        models.LegalNodeModel.__tablename__,
-        models.LegalRelationModel.__tablename__,
-        models.EvidenceModel.__tablename__,
-        models.RawArtifactModel.__tablename__,
-        models.AcquisitionAuditLogModel.__tablename__,
-    ]
+    async with engine.connect() as conn:
+        result = await conn.execute(catalog_query)
+        rows = result.fetchall()
+
+    await engine.dispose()
+
+    legal_tables = {
+        "sources", "legal_documents", "legal_versions", "legal_nodes",
+        "legal_relations", "evidences", "raw_artifacts", "acquisition_audit_logs"
+    }
 
     cascade_count = 0
     set_null_count = 0
     restrict_count = 0
 
-    # Inspeciona as chaves estrangeiras registradas nas tabelas de modelos do domínio
-    for cls in [
-        models.SourceModel,
-        models.LegalDocumentModel,
-        models.LegalVersionModel,
-        models.LegalNodeModel,
-        models.LegalRelationModel,
-        models.EvidenceModel,
-        models.RawArtifactModel,
-        models.AcquisitionAuditLogModel,
-    ]:
-        for col in cls.__table__.columns:
-            for fk in col.foreign_keys:
-                action = (fk.ondelete or "RESTRICT").upper()
-                if action == "CASCADE":
-                    cascade_count += 1
-                elif action == "SET NULL":
-                    set_null_count += 1
-                elif action in ("RESTRICT", "NO ACTION"):
-                    restrict_count += 1
+    decoded_actions = []
 
-    await engine.dispose()
+    for row in rows:
+        c_name, t_name, col_name, ref_t_name, delete_rule = row[0], row[1], row[2], row[3], row[4]
+        if t_name in legal_tables:
+            rule_upper = delete_rule.upper()
+            decoded_actions.append(f"{t_name}.{col_name} -> {rule_upper}")
+            if rule_upper == "CASCADE":
+                cascade_count += 1
+            elif rule_upper == "SET NULL":
+                set_null_count += 1
+            elif rule_upper in ("RESTRICT", "NO ACTION"):
+                restrict_count += 1
 
-    assert cascade_count == 0, f"Erros no Schema HEAD: Encontradas {cascade_count} FKs com CASCADE!"
-    assert set_null_count == 0, f"Erros no Schema HEAD: Encontradas {set_null_count} FKs com SET NULL!"
-    assert restrict_count > 0, "Auditadas com sucesso as Foreign Keys no schema HEAD."
+    assert cascade_count == 0, f"Erros no Catálogo PostgreSQL no HEAD: Encontradas {cascade_count} FKs com CASCADE! ({decoded_actions})"
+    assert set_null_count == 0, f"Erros no Catálogo PostgreSQL no HEAD: Encontradas {set_null_count} FKs com SET NULL! ({decoded_actions})"
+    assert restrict_count > 0, "Auditadas com sucesso as FKs com RESTRICT no catálogo PostgreSQL no HEAD (0004)."

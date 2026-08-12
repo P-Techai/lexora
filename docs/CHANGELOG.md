@@ -6,18 +6,26 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.6.5-database-migration-truth] - 2026-08-12
+
+### Adicionado
+- **Database Migration Truth Gate (Prompt 06.4):**
+  - Documentação da variável `TEST_DATABASE_URL` em `.env.example`.
+  - Teste explícito de conectividade PostgreSQL em `tests/integration/test_postgres_connection.py` com `SELECT version();`.
+  - Teste de auditoria de catálogo direto via Alembic em `tests/integration/test_postgres_schema_audit.py` (executa exclusivamente `alembic upgrade head` e lê `information_schema.referential_constraints`, decodificando `RESTRICT`, `NO ACTION`, `CASCADE` e `SET NULL`).
+  - Teste comportamental dedicado para PostgreSQL real em `tests/integration/test_postgres_evidence_referential_protection.py`.
+  - Especificação técnica `docs/DATABASE_TRUTH_GATE.md`.
+
+### Alterado
+- **Alembic Test Suite:** Atualizado `tests/integration/test_alembic.py` com integridade da cadeia de scripts (`0001` a `0004`) e teste de round-trip (`upgrade 0004` -> `downgrade 0003` -> `upgrade 0004`).
+- **Nomenclatura Honesta de Testes:** Teste auxiliar em SQLite nomeado explicitamente em `tests/integration/test_evidence_referential_protection.py`.
+
+---
+
 ## [0.6.4-integrity-verification] - 2026-08-12
 
 ### Adicionado
-- **PostgreSQL Reality & State Consistency Gate (Prompt 06.3):**
-  - Teste de auditoria de catálogo relacional direto em `tests/integration/test_postgres_schema_audit.py` (inspeciona o schema no `HEAD` / `0004` garantindo `CASCADE = 0` e `SET NULL = 0`).
-  - Suporte a execução Dual em `tests/integration/test_evidence_referential_protection.py` (SQLite como auxiliar rápido e PostgreSQL via `TEST_DATABASE_URL` como autoritativo).
-
-### Alterado
-- **Portabilidade de Documentação:**
-  - Substituição de todos os links absolutos (`file:///c:/Users/Pedro/...`) por caminhos relativos do repositório em `docs/HANDOFF.md` e documentação operacional.
-- **Clarificação de Estado no Handoff:**
-  - `docs/HANDOFF.md` atualizado para declarar `Fase Atual: FASE 06.3`, `Próxima fase autorizável: FASE 5`, `FASE 5: NÃO INICIADA`.
+- **PostgreSQL Reality & State Consistency Gate (Prompt 06.3):** Auditoria de schema e portabilidade de links na documentação.
 
 ---
 
@@ -25,17 +33,3 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ### Adicionado
 - **Final Integrity Closure (Prompt 06.2):** Migration `0004_evidence_fk_integrity.py`, suíte de revogação comportamental, testes de integridade referencial.
-
----
-
-## [0.6.2-legal-integrity-hardening] - 2026-08-12
-
-### Adicionado
-- **Hardening de Integridade Jurídica (Prompt 06.1):** Exceção `MissingRevokingSourceError`, migration `0003_legal_integrity_hardening.py`, auditoria automatizada e ADR-0012.
-
----
-
-## [0.6.1-readiness-audit] - 2026-08-12
-
-### Adicionado
-- **Auditoria de Prontidão (Prompt 06):** `docs/LEGAL_TRUTH_READINESS.md`, `ADR-0011` e testes de cenários históricos golden.

@@ -6,10 +6,10 @@ Este documento orienta novos agentes de IA e desenvolvedores sobre como assumir 
 
 # 1. Status do Projeto
 
-- **Fase Atual:** FASE 06.3 — PostgreSQL Reality & State Consistency Gate
-- **Versão Atual:** `v0.6.4-integrity-verification`
+- **Fase Atual:** FASE 06.4 — Database Migration Truth Gate
+- **Versão Atual:** `v0.6.5-database-migration-truth`
 - **Próxima Fase Autorizável:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real Brasileira
-- **Status da FASE 5:** **`NÃO INICIADA`** (Aguardando Prompt 07 / Fase 5)
+- **Status da FASE 5:** **`NÃO INICIADA`** (Aguardando Prompt da Fase 5)
 
 ---
 
@@ -23,19 +23,20 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 4. [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md)
 5. [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
 6. [docs/HANDOFF.md](docs/HANDOFF.md)
-7. [docs/LEGAL_INTEGRITY_HARDENING_REPORT.md](docs/LEGAL_INTEGRITY_HARDENING_REPORT.md)
-8. [docs/LEGAL_INTEGRITY_HARDENING.md](docs/LEGAL_INTEGRITY_HARDENING.md)
-9. [docs/TEMPORAL_LEGAL_MODEL.md](docs/TEMPORAL_LEGAL_MODEL.md)
-10. [docs/SOURCE_GOVERNANCE.md](docs/SOURCE_GOVERNANCE.md)
-11. [docs/ACQUISITION.md](docs/ACQUISITION.md)
-12. [docs/RAW_ARTIFACTS.md](docs/RAW_ARTIFACTS.md)
-13. [docs/INGESTION.md](docs/INGESTION.md)
-14. [docs/LEGAL_INTEGRITY.md](docs/LEGAL_INTEGRITY.md)
-15. [docs/LEGAL_MODEL.md](docs/LEGAL_MODEL.md)
-16. [docs/DATABASE.md](docs/DATABASE.md)
-17. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
-18. Regras em [.agents/rules/](.agents/rules/)
-19. Código em `src/` e testes em `tests/`.
+7. [docs/DATABASE_TRUTH_GATE.md](docs/DATABASE_TRUTH_GATE.md)
+8. [docs/LEGAL_INTEGRITY_HARDENING_REPORT.md](docs/LEGAL_INTEGRITY_HARDENING_REPORT.md)
+9. [docs/LEGAL_INTEGRITY_HARDENING.md](docs/LEGAL_INTEGRITY_HARDENING.md)
+10. [docs/TEMPORAL_LEGAL_MODEL.md](docs/TEMPORAL_LEGAL_MODEL.md)
+11. [docs/SOURCE_GOVERNANCE.md](docs/SOURCE_GOVERNANCE.md)
+12. [docs/ACQUISITION.md](docs/ACQUISITION.md)
+13. [docs/RAW_ARTIFACTS.md](docs/RAW_ARTIFACTS.md)
+14. [docs/INGESTION.md](docs/INGESTION.md)
+15. [docs/LEGAL_INTEGRITY.md](docs/LEGAL_INTEGRITY.md)
+16. [docs/LEGAL_MODEL.md](docs/LEGAL_MODEL.md)
+17. [docs/DATABASE.md](docs/DATABASE.md)
+18. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
+19. Regras em [.agents/rules/](.agents/rules/)
+20. Código em `src/` e testes em `tests/`.
 
 ---
 
@@ -53,7 +54,7 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 # 4. Próxima Tarefa Prioritária
 
 **Próxima Fase:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real Brasileira  
-**Versão:** `v0.6.4-integrity-verification` (Gate 06.3 Concluído)  
+**Versão:** `v0.6.5-database-migration-truth` (Gate 06.4 Concluído)  
 **Tarefa Imediata:** 
 1. Implementar os conectores de leitura sintética/mock para atuar sobre a estrutura da Constituição Federal e Leis Complementares;
 2. Desenvolver os parsers normativos capazes de extrair a hierarquia real de artigos, parágrafos, incisos e alíneas;

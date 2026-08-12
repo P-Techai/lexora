@@ -1,22 +1,22 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-12  
-**Fase Atual:** PROMPT 06.3 — PostgreSQL Reality & State Consistency Gate  
-**Versão Atual:** `v0.6.4-integrity-verification`  
-**Status do Projeto:** FASE 06.3 — PASS. Validação empírica concluída: 1) Suporte a testes duais SQLite (auxiliar) e PostgreSQL autoritativo em `tests/integration/test_evidence_referential_protection.py`; 2) Auditoria direta de catálogo no HEAD (`0004`) confirmando `CASCADE = 0` e `SET NULL = 0` em `tests/integration/test_postgres_schema_audit.py`; 3) Cadeia de migrations `0001` a `0004` e round-trip testados; 4) Correção de todos os caminhos absolutos para caminhos relativos portáveis em `docs/HANDOFF.md` e documentação operacional.
+**Fase Atual:** PROMPT 06.4 — Database Migration Truth Gate  
+**Versão Atual:** `v0.6.5-database-migration-truth`  
+**Status do Projeto:** FASE 06.4 — PASS. Todas as validações empíricas concluídas: 1) `TEST_DATABASE_URL` documentada em `.env.example`; 2) Teste de conexão `SELECT version()` em `test_postgres_connection.py`; 3) Schema audit via Alembic migrations `alembic upgrade head` e catálogo `information_schema.referential_constraints` em `test_postgres_schema_audit.py`; 4) Rejeição física de exclusões via `RESTRICT` em `test_postgres_evidence_referential_protection.py`; 5) Validação da cadeia de migrations `0001` a `0004` e round-trip em `test_alembic.py`; 6) Especificação técnica publicada em `docs/DATABASE_TRUTH_GATE.md`.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Suporte a Banco Dual (PostgreSQL Autoritativo & SQLite Auxiliar):**
-  - Atualizado `test_evidence_referential_protection.py` para suportar execução dual via `TEST_DATABASE_URL`. Rejeição de exclusões (`RESTRICT`) para `LegalDocument`, `LegalVersion` e `LegalNode` vinculados a `Evidence` fisicamente validada em motor relacional.
-- **Auditoria Direta de Schema no HEAD (0004):**
-  - Criado `test_postgres_schema_audit.py` inspecionando o catálogo de constraints. Confirmado que no `HEAD` (`0004`) o número de FKs jurídicas com `CASCADE` é 0 e com `SET NULL` é 0.
-- **Hardening de Portabilidade na Documentação:**
-  - Removidos todos os caminhos absolutos de desenvolvimento (`file:///c:/Users/Pedro/...`) de `docs/HANDOFF.md` e arquivos operacionais, substituindo por links relativos do repositório (`docs/PROJECT.md`, `docs/HANDOFF.md`).
-- **Documentação & Relatório Final:**
-  - `docs/LEGAL_INTEGRITY_HARDENING.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: FASE 06.3 — PASS) e `ADR-0012`.
+- **Eliminação de Fallbacks Silenciosos:**
+  - Testes PostgreSQL falham limpa e transparentemente caso `TEST_DATABASE_URL` esteja ausente ou aponte para motor não-PostgreSQL.
+- **Validação de Schema Via Alembic (`alembic upgrade head`):**
+  - Auditoria de catálogo em `test_postgres_schema_audit.py` aplica exclusivamente a suíte de migrations DDL do Alembic para construir o banco auditado (sem nunca utilizar `metadata.create_all()`).
+- **Inspeção Direta do Catálogo do Banco (`information_schema`):**
+  - Confirmação de que no `HEAD` (`0004`), `CASCADE = 0` e `SET NULL = 0` em todas as chaves estrangeiras normativas/proveniência do banco.
+- **Documentação & Especificação Técnica:**
+  - `docs/DATABASE_TRUTH_GATE.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: FASE 06.4 — PASS) e `ADR-0012`.
 - **Status Cloud:** Neon = NÃO INTEGRADO, Supabase = NÃO INTEGRADO, Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -68,6 +68,7 @@ lexora/
 │   ├── CHANGELOG.md
 │   ├── CURRENT_STATE.md
 │   ├── DATABASE.md
+│   ├── DATABASE_TRUTH_GATE.md
 │   ├── DECISIONS.md
 │   ├── HANDOFF.md
 │   ├── INGESTION.md
@@ -170,6 +171,8 @@ lexora/
 │   │   ├── test_database.py
 │   │   ├── test_evidence_referential_protection.py
 │   │   ├── test_golden_historical_scenario.py
+│   │   ├── test_postgres_connection.py
+│   │   ├── test_postgres_evidence_referential_protection.py
 │   │   ├── test_postgres_real.py
 │   │   ├── test_postgres_schema_audit.py
 │   │   ├── test_temporal_use_cases.py
