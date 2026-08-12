@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from src.domain.entities.legal_version import LegalVersion
 from src.domain.enums import TemporalStatus
@@ -7,14 +7,22 @@ from src.domain.exceptions import InvalidEffectivePeriodError
 
 
 class TemporalIntegrityValidator:
-    """Validador puro de domínio para integridade de intervalos de vigência temporal."""
+    """
+    ÚNICA FONTE DE VERDADE DOMINIAL PARA A MATEMÁTICA TEMPORAL DE VIGÊNCIA.
+    Semântica de Intervalo Semi-Aberto: [effective_from, effective_until).
+    """
 
     @staticmethod
-    def is_date_in_range(target_date: date, effective_from: date, effective_until: date = None) -> bool:
+    def is_date_in_range(target_date: date, effective_from: Optional[date], effective_until: Optional[date] = None) -> bool:
         """
-        Semântica do Intervalo Semi-Aberto: [effective_from, effective_until).
-        Retorna True se target_date >= effective_from E (effective_until é None OU target_date < effective_until).
+        Matemática Temporal Centralizada: [effective_from, effective_until).
+        - target_date == effective_from -> True (Inclusivo no início)
+        - target_date == effective_until -> False (Exclusivo no término!)
+        - effective_until IS NULL -> Vigência aberta a partir de effective_from.
         """
+        if not effective_from:
+            return False
+
         if target_date < effective_from:
             return False
 
@@ -66,7 +74,6 @@ class TemporalIntegrityValidator:
                 continue
 
             # Verificação de Overlap
-            # Se curr.effective_until é None, mas existe nxt com effective_from posterior -> Overlap se nxt começa antes do fim de curr
             if curr.effective_until is None:
                 has_overlap = True
                 warnings.append(

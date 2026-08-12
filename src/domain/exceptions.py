@@ -28,6 +28,11 @@ class MissingEvidenceError(LexoraDomainError):
     pass
 
 
+class MissingRevokingSourceError(LexoraDomainError):
+    """Lançada quando tenta-se criar uma relação de revogação sem fornecer um nó/ato revogador distinto."""
+    pass
+
+
 class TreeCycleDetectedError(LexoraDomainError):
     """Lançada quando um nó hierárquico aponta para um ancestral gerando um ciclo na árvore."""
     pass

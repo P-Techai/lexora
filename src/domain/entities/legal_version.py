@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
@@ -19,14 +19,15 @@ class LegalVersion(BaseModel):
     source_document_url: Optional[str] = None
     raw_storage_key: Optional[str] = None
     parser_version: str = "1.0.0"
-    created_at: Optional[datetime] = None
 
     def is_effective_on(self, target_date: date) -> bool:
-        """Verifica se a versão estava vigente na data informada."""
-        if self.status != VersionStatus.ACTIVE:
-            return False
-        if self.effective_from is not None and target_date < self.effective_from:
-            return False
-        if self.effective_until is not None and target_date > self.effective_until:
-            return False
-        return True
+        """
+        Delega para a única fonte de verdade temporal do domínio:
+        TemporalIntegrityValidator.is_date_in_range [effective_from, effective_until).
+        """
+        from src.domain.services.temporal_validator import TemporalIntegrityValidator
+        return TemporalIntegrityValidator.is_date_in_range(
+            target_date=target_date,
+            effective_from=self.effective_from,
+            effective_until=self.effective_until
+        )

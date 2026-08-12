@@ -10,8 +10,8 @@ from src.application.ports.repositories import (
     LegalVersionRepository,
 )
 from src.domain.entities.legal_relation import LegalRelation
-from src.domain.enums import LegalRelationType, VersionStatus
-from src.domain.exceptions import InvalidLegalDocumentError, MissingEvidenceError
+from src.domain.enums import LegalRelationType
+from src.domain.exceptions import InvalidLegalDocumentError, MissingEvidenceError, MissingRevokingSourceError
 
 
 class RevokeLegalDocumentUseCase:
@@ -51,9 +51,15 @@ class RevokeLegalDocumentUseCase:
         if not versions:
             raise InvalidLegalDocumentError(f"Documento '{document_id}' não possui versões.")
 
-        # Encerra o período de vigência (effective_until = revocation_date)
-        # IMPORTANTE: Preserva o histórico! Não muta o status estático da versão para REVOKED,
-        # permitindo que consultas anteriores a revocation_date continuem retornando a versão vigente!
+        # CORREÇÃO CRÍTICA (PROMPT 06.1): A revogação exige uma origem normativa revogadora identificável distinta.
+        # PROIBIDO criar auto-relação (source_node_id == target_node_id).
+        if not revoking_node_id:
+            raise MissingRevokingSourceError(
+                "Revogação normativa rejeitada: Não foi fornecido um nó/ato revogador distinto (revoking_node_id). "
+                "Uma norma não pode criar uma relação REVOKES apontando para si mesma."
+            )
+
+        # Encerra a vigência (effective_until = revocation_date) preservando o histórico
         for ver in versions:
             if ver.effective_until is None or ver.effective_until > revocation_date:
                 updated_ver = ver.model_copy(update={
@@ -61,13 +67,17 @@ class RevokeLegalDocumentUseCase:
                 })
                 await self.version_repo.save(updated_ver)
 
-                # Criação da Relação de Revogação vinculada à Evidência
                 nodes = await self.node_repo.get_nodes_by_version(ver.id)
                 if nodes:
                     target_root_node = nodes[0]
+                    if revoking_node_id == target_root_node.id:
+                        raise MissingRevokingSourceError(
+                            f"Auto-relação proibida: revoking_node_id ({revoking_node_id}) é idêntico ao nó alvo ({target_root_node.id})."
+                        )
+
                     relation = LegalRelation(
                         id=str(uuid.uuid4()),
-                        source_node_id=revoking_node_id or target_root_node.id,
+                        source_node_id=revoking_node_id,
                         target_node_id=target_root_node.id,
                         relation_type=LegalRelationType.REVOKES,
                         effective_from=revocation_date,

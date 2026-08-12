@@ -8,8 +8,8 @@ from src.application.ports.repositories import (
     LegalRelationRepository,
 )
 from src.domain.entities.legal_relation import LegalRelation
-from src.domain.enums import LegalRelationType, NodeStatus
-from src.domain.exceptions import InvalidLegalNodeError, MissingEvidenceError
+from src.domain.enums import LegalRelationType
+from src.domain.exceptions import InvalidLegalNodeError, MissingEvidenceError, MissingRevokingSourceError
 
 
 class RevokeLegalNodeUseCase:
@@ -40,17 +40,22 @@ class RevokeLegalNodeUseCase:
         if not evidence:
             raise MissingEvidenceError(f"Evidência com ID '{evidence_id}' exigida para revogação não existe.")
 
-        # Preserva o nó histórico intacto, apenas registrando o evento de revogação via relação e metadados
-        if revoking_node_id:
-            relation = LegalRelation(
-                id=str(uuid.uuid4()),
-                source_node_id=revoking_node_id,
-                target_node_id=target_node.id,
-                relation_type=LegalRelationType.REVOKES,
-                effective_from=revocation_date,
-                confidence=1.0,
-                evidence_id=evidence_id
+        # CORREÇÃO CRÍTICA (PROMPT 06.1): A revogação exige um nó revogador distinto. Auto-relação é proibida.
+        if not revoking_node_id or revoking_node_id == node_id:
+            raise MissingRevokingSourceError(
+                f"Revogação normativa rejeitada: revoking_node_id ({revoking_node_id}) é nulo ou idêntico ao nó alvo ({node_id}). "
+                "Uma norma não pode revogar a si mesma sem um ato revogador distinto."
             )
-            await self.relation_repo.save(relation)
+
+        relation = LegalRelation(
+            id=str(uuid.uuid4()),
+            source_node_id=revoking_node_id,
+            target_node_id=target_node.id,
+            relation_type=LegalRelationType.REVOKES,
+            effective_from=revocation_date,
+            confidence=1.0,
+            evidence_id=evidence_id
+        )
+        await self.relation_repo.save(relation)
 
         return True

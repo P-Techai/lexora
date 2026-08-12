@@ -20,8 +20,7 @@ class TemporalLegalSearchService:
     ) -> Tuple[TemporalStatus, Optional[LegalVersion], List[str]]:
         """
         Determina qual versão de um documento jurídico estava vigente na target_date.
-        Aplica a semântica de intervalo semi-aberto [effective_from, effective_until).
-        A revogação é avaliada DINAMICAMENTE em relação a target_date (preservando o histórico prévio!).
+        Delega a verificação de intervalo para a fonte única de verdade: TemporalIntegrityValidator.is_date_in_range.
         """
         if not versions:
             return TemporalStatus.NOT_FOUND, None, ["Documento não possui versões registradas."]
@@ -31,7 +30,7 @@ class TemporalLegalSearchService:
         if series_status == TemporalStatus.TEMPORAL_CONFLICT:
             return TemporalStatus.TEMPORAL_CONFLICT, None, series_warnings
 
-        # 2. Filtragem da versão aplicável à target_date
+        # 2. Filtragem da versão aplicável à target_date usando a fonte única de verdade
         applicable_versions: List[LegalVersion] = []
         expired_versions: List[LegalVersion] = []
 
@@ -45,10 +44,8 @@ class TemporalLegalSearchService:
                     expired_versions.append(version)
 
         if not applicable_versions:
-            # Se target_date é após o encerramento de vigência por revogação
             if expired_versions:
                 last_expired = max(expired_versions, key=lambda v: v.effective_until or date.max)
-                # Verifica se há relação de revogação eficaz em target_date
                 is_revoked_by_relation = False
                 if relations:
                     for rel in relations:
@@ -60,7 +57,6 @@ class TemporalLegalSearchService:
                     return TemporalStatus.REVOKED, last_expired, [f"A versão {last_expired.version_number} foi revogada em {last_expired.effective_until}."]
                 return TemporalStatus.EXPIRED, last_expired, [f"A versão {last_expired.version_number} expirou em {last_expired.effective_until}."]
 
-            # Verifica Vacatio Legis
             earliest_from = min((v.effective_from for v in versions if v.effective_from), default=None)
             if earliest_from and target_date < earliest_from:
                 return TemporalStatus.NOT_YET_EFFECTIVE, None, [f"A norma ainda não estava em vigor na data {target_date} (vigência inicia em {earliest_from})."]
@@ -72,7 +68,6 @@ class TemporalLegalSearchService:
 
         selected_version = applicable_versions[0]
 
-        # Verifica se há revogação dinâmica via relação eficaz na data
         if relations:
             for rel in relations:
                 if rel.relation_type == LegalRelationType.REVOKES and rel.effective_from and target_date >= rel.effective_from:
@@ -88,10 +83,6 @@ class TemporalLegalSearchService:
         target_date: Optional[date] = None,
         relations: Optional[List[LegalRelation]] = None
     ) -> List[LegalNode]:
-        """
-        Garante a consistência de versão da árvore normativa em uma consulta temporal.
-        Se target_date e relações de revogação forem fornecidos, avalia revogação parcial por nó.
-        """
         version_nodes = [node for node in nodes if node.legal_version_id == expected_version_id]
         if not target_date or not relations:
             return version_nodes
@@ -101,5 +92,4 @@ class TemporalLegalSearchService:
             if rel.relation_type == LegalRelationType.REVOKES and rel.effective_from and target_date >= rel.effective_from:
                 revoked_node_ids.add(rel.target_node_id)
 
-        # Exclui nós que foram revogados na/antes da target_date
         return [node for node in version_nodes if node.id not in revoked_node_ids]

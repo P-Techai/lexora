@@ -1,33 +1,25 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-12  
-**Fase Atual:** FASE 4 — Advanced Legal Versioning & Temporal Truth  
-**Versão Atual:** `0.6.0-temporal-truth`  
-**Status do Projeto:** Fase 4 concluída com sucesso. Matemática temporal de intervalos semi-abertos `[effective_from, effective_until)`, validador de sobreposição de vigências (`TEMPORAL_CONFLICT`) e lacunas (`TEMPORAL_GAP`), serviço de busca temporal determinístico (`TemporalLegalSearchService`), modelo imutável de revogação total e parcial sem comandos `DELETE` SQL, casos de uso temporais, auditoria de consistência de versão da árvore normativa, regra de agente 01 atualizada e ADR-0010 concluídos.
+**Fase Atual:** PROMPT 06.1 — Hardening Pós-Auditoria de Integridade Jurídica  
+**Versão Atual:** `0.6.2-legal-integrity-hardening`  
+**Status do Projeto:** FASE 06.1 — PASS. Todas as correções obrigatórias concluídas: eliminação de ON DELETE CASCADE (100% RESTRICT em modelos e migration 0003), fonte única de verdade dominial para matemática temporal `[effective_from, effective_until)`, proibição de auto-relações de revogação (`MissingRevokingSourceError`), formalização do conceito de Temporal Closure, suíte de auditoria automatizada e relatório em `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md`.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Semântica Temporal de Intervalos Semi-Abertos $[effective\_from, effective\_until)$:**
-  - Implementada resolução exata de vigência em qualquer data de referência $T$.
-  - Enum `TemporalStatus` (`EFFECTIVE`, `NOT_YET_EFFECTIVE`, `EXPIRED`, `REVOKED`, `TEMPORAL_GAP`, `TEMPORAL_CONFLICT`, `NOT_FOUND`).
-- **Validação de Integridade Temporal (`TemporalIntegrityValidator`):**
-  - Detecção rigorosa de sobreposições de vigência (`OVERLAP` -> `TEMPORAL_CONFLICT`) sem resolução silenciosa por IA.
-  - Detecção de lacunas temporais sem cobertura normativa (`GAP` -> `TEMPORAL_GAP`).
-- **Serviço de Busca Temporal (`TemporalLegalSearchService`):**
-  - Resolução de vigência por documento e data de referência $T$.
-  - Validação da consistência de versão da árvore normativa (impede a mistura de nós de versões diferentes).
-- **Modelo Imutável de Revogação Total e Parcial:**
-  - `RevokeLegalDocumentUseCase` (Revogação total atualiza vigência e status sem excluir dados do banco).
-  - `RevokeLegalNodeUseCase` (Revogação parcial afeta apenas o nó alvo, mantendo os nós irmãos vigentes).
-  - Exigência estrita de proveniência de evidência (`Evidence`) para revogações.
-- **Casos de Uso da Aplicação (`src/application/use_cases/legal/`):**
-  - `QueryLegalAtDateUseCase`, `RevokeLegalDocumentUseCase`, `RevokeLegalNodeUseCase`, `ValidateTemporalIntegrityUseCase`.
-- **Governança & Regra de Agente:**
-  - `.agents/rules/01_legal_truth.md` atualizada para consagrar o tempo como dimensão primária da Verdade Jurídica.
-- **Documentação Adicionada:**
-  - `docs/TEMPORAL_LEGAL_MODEL.md` e `ADR-0010`.
+- **Eliminação de Cascades Destrutivos (`ON DELETE RESTRICT`):**
+  - Ajustados todos os modelos ORM (`LegalVersionModel`, `LegalNodeModel`, `LegalRelationModel`, `EvidenceModel`, `RawArtifactModel`, `AcquisitionAuditLogModel`) e criada a migration `0003_legal_integrity_hardening.py` para aplicar `RESTRICT` em todas as FKs.
+- **Fonte Única de Verdade Temporal:**
+  - Centralizada a semântica semi-aberta em `TemporalIntegrityValidator.is_date_in_range(target_date, effective_from, effective_until)`. `LegalVersion.is_effective_on()` e `TemporalLegalSearchService` delegam exclusivamente a essa função.
+- **Proibição de Auto-Relações de Revogação:**
+  - `RevokeLegalDocumentUseCase` e `RevokeLegalNodeUseCase` disparam `MissingRevokingSourceError` caso um nó revogador distinto não seja fornecido (impedindo `DOCUMENTO A REVOKES DOCUMENTO A`).
+- **Suíte de Auditoria Automatizada:**
+  - `tests/unit/test_security_governance_audit.py` audita e falha se qualquer modelo ORM contiver `CASCADE` ou se a matemática temporal for duplicada.
+- **Documentação & Relatório Final:**
+  - `docs/LEGAL_INTEGRITY_HARDENING.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: PASS) e `ADR-0012`.
+- **Status Cloud:** Neon = NÃO INTEGRADO, Supabase = NÃO INTEGRADO, Cloudflare = NÃO INTEGRADO.
 
 ---
 
@@ -55,7 +47,8 @@ lexora/
 │   ├── script.py.mako
 │   └── versions/
 │       ├── 0001_canonical_legal_model.py
-│       └── 0002_acquisition_and_artifacts.py
+│       ├── 0002_acquisition_and_artifacts.py
+│       └── 0003_legal_integrity_hardening.py
 ├── docs/
 │   ├── adr/
 │   │   ├── ADR-0001-clean-architecture.md
@@ -67,7 +60,9 @@ lexora/
 │   │   ├── ADR-0007-canonical-legal-data-model.md
 │   │   ├── ADR-0008-source-authority-vs-source-trust.md
 │   │   ├── ADR-0009-source-governance-and-acquisition-security.md
-│   │   └── ADR-0010-temporal-legal-semantics.md
+│   │   ├── ADR-0010-temporal-legal-semantics.md
+│   │   ├── ADR-0011-dynamic-temporal-revocation-resolution.md
+│   │   └── ADR-0012-legal-integrity-hardening.md
 │   ├── ACQUISITION.md
 │   ├── AGENT_PROTOCOL.md
 │   ├── ARCHITECTURE.md
@@ -78,7 +73,10 @@ lexora/
 │   ├── HANDOFF.md
 │   ├── INGESTION.md
 │   ├── LEGAL_INTEGRITY.md
+│   ├── LEGAL_INTEGRITY_HARDENING.md
+│   ├── LEGAL_INTEGRITY_HARDENING_REPORT.md
 │   ├── LEGAL_MODEL.md
+│   ├── LEGAL_TRUTH_READINESS.md
 │   ├── PROJECT.md
 │   ├── PROJECT_MEMORY.md
 │   ├── RAW_ARTIFACTS.md
@@ -171,6 +169,7 @@ lexora/
 │   │   ├── test_acquisition_pipeline.py
 │   │   ├── test_alembic.py
 │   │   ├── test_database.py
+│   │   ├── test_golden_historical_scenario.py
 │   │   ├── test_postgres_real.py
 │   │   ├── test_temporal_use_cases.py
 │   │   └── test_use_cases.py
@@ -180,6 +179,7 @@ lexora/
 │       ├── test_domain_canonical.py
 │       ├── test_ingestion_pipeline.py
 │       ├── test_ports.py
+│       ├── test_security_governance_audit.py
 │       ├── test_source_governance.py
 │       ├── test_temporal_integrity.py
 │       └── test_temporal_semantics.py
@@ -196,6 +196,6 @@ lexora/
 # 3. Próxima Tarefa Prioritária
 
 **FASE 5 — Ingestão Oficial & Parsers de Legislação Real**
-1. Implementar o conector de leitura sintética/mock para atuar sobre a estrutura da Constituição Federal e Leis Complementares;
-2. Desenvolver os parsers normativos capazes de extrair a hierarquia real de artigos, parágrafos, incisos e alíneas;
-3. Integrar a ingestão oficial com o pipeline determinístico e temporal construído nas Fases 1-4.
+1. Implementar os conectores de leitura para os portais oficiais primários (Planalto, Receita Federal, CONFAZ);
+2. Desenvolver os parsers estruturais especializados para a Constituição Federal, Leis Complementares e Ordinárias;
+3. Realizar a primeira ingestão oficial controlada na base canônica do LÉXORA.

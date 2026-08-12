@@ -14,17 +14,19 @@ Siga o checklist do [.agents/workflows/start_session.md](file:///c:/Users/Pedro/
 4. [docs/AGENT_PROTOCOL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/AGENT_PROTOCOL.md)
 5. [docs/CURRENT_STATE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/CURRENT_STATE.md)
 6. [docs/HANDOFF.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/HANDOFF.md)
-7. [docs/TEMPORAL_LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/TEMPORAL_LEGAL_MODEL.md)
-8. [docs/SOURCE_GOVERNANCE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/SOURCE_GOVERNANCE.md)
-9. [docs/ACQUISITION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/ACQUISITION.md)
-10. [docs/RAW_ARTIFACTS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/RAW_ARTIFACTS.md)
-11. [docs/INGESTION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/INGESTION.md)
-12. [docs/LEGAL_INTEGRITY.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY.md)
-13. [docs/LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_MODEL.md)
-14. [docs/DATABASE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DATABASE.md)
-15. [docs/DECISIONS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DECISIONS.md) e arquivos em [docs/adr/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/adr/)
-16. Regras em [.agents/rules/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/)
-17. Código em `src/` e testes em `tests/`.
+7. [docs/LEGAL_INTEGRITY_HARDENING_REPORT.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY_HARDENING_REPORT.md)
+8. [docs/LEGAL_INTEGRITY_HARDENING.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY_HARDENING.md)
+9. [docs/TEMPORAL_LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/TEMPORAL_LEGAL_MODEL.md)
+10. [docs/SOURCE_GOVERNANCE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/SOURCE_GOVERNANCE.md)
+11. [docs/ACQUISITION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/ACQUISITION.md)
+12. [docs/RAW_ARTIFACTS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/RAW_ARTIFACTS.md)
+13. [docs/INGESTION.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/INGESTION.md)
+14. [docs/LEGAL_INTEGRITY.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_INTEGRITY.md)
+15. [docs/LEGAL_MODEL.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/LEGAL_MODEL.md)
+16. [docs/DATABASE.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DATABASE.md)
+17. [docs/DECISIONS.md](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/DECISIONS.md) e arquivos em [docs/adr/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/docs/adr/)
+18. Regras em [.agents/rules/](file:///c:/Users/Pedro/OneDrive/Desktop/lexora/.agents/rules/)
+19. Código em `src/` e testes em `tests/`.
 
 ---
 
@@ -41,8 +43,9 @@ Siga o checklist do [.agents/workflows/start_session.md](file:///c:/Users/Pedro/
 
 # 3. Próximo Passo Prioritário
 
-**Fase Atual:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real  
+**Fase Atual:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real Brasileira  
+**Versão Atual:** `v0.6.2-legal-integrity-hardening`  
 **Tarefa Imediata:** 
-1. Implementar o conector de leitura sintética/mock para atuar sobre a estrutura da Constituição Federal e Leis Complementares;
+1. Implementar os conectores de leitura sintética/mock para atuar sobre a estrutura da Constituição Federal e Leis Complementares;
 2. Desenvolver os parsers normativos capazes de extrair a hierarquia real de artigos, parágrafos, incisos e alíneas;
 3. Integrar a ingestão oficial com o pipeline determinístico e temporal construído nas Fases 1-4.
