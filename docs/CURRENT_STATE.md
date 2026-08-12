@@ -1,24 +1,25 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-12  
-**Fase Atual:** PROMPT 06.1 — Hardening Pós-Auditoria de Integridade Jurídica  
-**Versão Atual:** `0.6.2-legal-integrity-hardening`  
-**Status do Projeto:** FASE 06.1 — PASS. Todas as correções obrigatórias concluídas: eliminação de ON DELETE CASCADE (100% RESTRICT em modelos e migration 0003), fonte única de verdade dominial para matemática temporal `[effective_from, effective_until)`, proibição de auto-relações de revogação (`MissingRevokingSourceError`), formalização do conceito de Temporal Closure, suíte de auditoria automatizada e relatório em `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md`.
+**Fase Atual:** PROMPT 06.2 — Final Integrity Closure  
+**Versão Atual:** `v0.6.3-final-integrity-closure`  
+**Status do Projeto:** FASE 06.2 — PASS. Todas as 4 correções da auditoria final concluídas: 1) FKs de Evidence em `RESTRICT` em modelos e migration `0004_evidence_fk_integrity.py`; 2) Downgrade determinístico da migration `0003_legal_integrity_hardening.py` sem `pass`; 3) Testes comportamentais de revogação para Cenários A, B e C; 4) Auditoria global automatizada de FKs (0 CASCADE, 0 SET NULL) e teste de integridade referencial de Evidence no banco.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Eliminação de Cascades Destrutivos (`ON DELETE RESTRICT`):**
-  - Ajustados todos os modelos ORM (`LegalVersionModel`, `LegalNodeModel`, `LegalRelationModel`, `EvidenceModel`, `RawArtifactModel`, `AcquisitionAuditLogModel`) e criada a migration `0003_legal_integrity_hardening.py` para aplicar `RESTRICT` em todas as FKs.
-- **Fonte Única de Verdade Temporal:**
-  - Centralizada a semântica semi-aberta em `TemporalIntegrityValidator.is_date_in_range(target_date, effective_from, effective_until)`. `LegalVersion.is_effective_on()` e `TemporalLegalSearchService` delegam exclusivamente a essa função.
-- **Proibição de Auto-Relações de Revogação:**
-  - `RevokeLegalDocumentUseCase` e `RevokeLegalNodeUseCase` disparam `MissingRevokingSourceError` caso um nó revogador distinto não seja fornecido (impedindo `DOCUMENTO A REVOKES DOCUMENTO A`).
-- **Suíte de Auditoria Automatizada:**
-  - `tests/unit/test_security_governance_audit.py` audita e falha se qualquer modelo ORM contiver `CASCADE` ou se a matemática temporal for duplicada.
+- **Correção de FKs de Evidence (`ON DELETE RESTRICT`):**
+  - `EvidenceModel` ORM e migration `0004_evidence_fk_integrity.py` alterados de `SET NULL` para `RESTRICT` nas colunas `legal_document_id`, `legal_version_id` e `legal_node_id`.
+- **Downgrade Determinístico da Migration 0003:**
+  - `alembic/versions/0003_legal_integrity_hardening.py` atualizada com implementação completa de `downgrade()` revertendo para as FKs originais.
+- **Testes Comportamentais de Revogação:**
+  - `tests/unit/test_revocation_behavior.py` testando Cenários A (`revoking_node_id = None`), B (auto-revogação `A REVOKES A`) e C (revogação válida `B REVOKES A`).
+- **Auditoria Global de FKs e Integridade Referencial:**
+  - `tests/unit/test_security_governance_audit.py` audita todas as 8 tabelas/modelos ORM e migrations garantindo 0 CASCADE e 0 SET NULL.
+  - `tests/integration/test_evidence_referential_protection.py` comprova a rejeição de exclusões via `RESTRICT` em banco de dados.
 - **Documentação & Relatório Final:**
-  - `docs/LEGAL_INTEGRITY_HARDENING.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: PASS) e `ADR-0012`.
+  - `docs/LEGAL_INTEGRITY_HARDENING.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: FASE 06.2 — PASS) e `ADR-0012`.
 - **Status Cloud:** Neon = NÃO INTEGRADO, Supabase = NÃO INTEGRADO, Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -48,7 +49,8 @@ lexora/
 │   └── versions/
 │       ├── 0001_canonical_legal_model.py
 │       ├── 0002_acquisition_and_artifacts.py
-│       └── 0003_legal_integrity_hardening.py
+│       ├── 0003_legal_integrity_hardening.py
+│       └── 0004_evidence_fk_integrity.py
 ├── docs/
 │   ├── adr/
 │   │   ├── ADR-0001-clean-architecture.md
@@ -169,6 +171,7 @@ lexora/
 │   │   ├── test_acquisition_pipeline.py
 │   │   ├── test_alembic.py
 │   │   ├── test_database.py
+│   │   ├── test_evidence_referential_protection.py
 │   │   ├── test_golden_historical_scenario.py
 │   │   ├── test_postgres_real.py
 │   │   ├── test_temporal_use_cases.py
@@ -179,6 +182,7 @@ lexora/
 │       ├── test_domain_canonical.py
 │       ├── test_ingestion_pipeline.py
 │       ├── test_ports.py
+│       ├── test_revocation_behavior.py
 │       ├── test_security_governance_audit.py
 │       ├── test_source_governance.py
 │       ├── test_temporal_integrity.py

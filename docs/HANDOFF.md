@@ -44,7 +44,7 @@ Siga o checklist do [.agents/workflows/start_session.md](file:///c:/Users/Pedro/
 # 3. Próximo Passo Prioritário
 
 **Fase Atual:** FASE 5 — Ingestão Oficial & Parsers de Legislação Real Brasileira  
-**Versão Atual:** `v0.6.2-legal-integrity-hardening`  
+**Versão Atual:** `v0.6.3-final-integrity-closure`  
 **Tarefa Imediata:** 
 1. Implementar os conectores de leitura sintética/mock para atuar sobre a estrutura da Constituição Federal e Leis Complementares;
 2. Desenvolver os parsers normativos capazes de extrair a hierarquia real de artigos, parágrafos, incisos e alíneas;

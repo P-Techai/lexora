@@ -12,13 +12,13 @@ class EvidenceModel(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     source_id: Mapped[str] = mapped_column(String(36), ForeignKey("sources.id", ondelete="RESTRICT"), nullable=False)
     legal_document_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("legal_documents.id", ondelete="SET NULL"), nullable=True
+        String(36), ForeignKey("legal_documents.id", ondelete="RESTRICT"), nullable=True
     )
     legal_version_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("legal_versions.id", ondelete="SET NULL"), nullable=True
+        String(36), ForeignKey("legal_versions.id", ondelete="RESTRICT"), nullable=True
     )
     legal_node_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("legal_nodes.id", ondelete="SET NULL"), nullable=True
+        String(36), ForeignKey("legal_nodes.id", ondelete="RESTRICT"), nullable=True
     )
     source_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     quote_or_excerpt: Mapped[str] = mapped_column(Text, nullable=False)

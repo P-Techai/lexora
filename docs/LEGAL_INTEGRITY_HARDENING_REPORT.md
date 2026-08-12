@@ -1,8 +1,9 @@
-# LÉXORA — Relatório Final de Hardening de Integridade Jurídica (PROMPT 06.1)
+# LÉXORA — RELATÓRIO FINAL — PROMPT 06.2 (FINAL INTEGRITY CLOSURE)
 
-**Status Final:** **`FASE 06.1 — PASS`**  
-**Versão Atual:** `v0.6.2-legal-integrity-hardening`  
-**Data de Conclusão:** 2026-08-12
+**Status Final:** **`FASE 06.2 — PASS`**  
+**Versão Final:** `v0.6.3-final-integrity-closure`  
+**Data de Conclusão:** 2026-08-12  
+**Confirmação de Escopo:** **`FASE 5 NÃO INICIADA`**
 
 ---
 
@@ -14,88 +15,72 @@
 
 ## 2. Arquivos Criados
 
-- `src/domain/exceptions.py` (Adicionado `MissingRevokingSourceError`)
-- `alembic/versions/0003_legal_integrity_hardening.py` (Migration corretiva de FKs para `RESTRICT`)
-- `docs/adr/ADR-0012-legal-integrity-hardening.md` (ADR-0012)
-- `docs/LEGAL_INTEGRITY_HARDENING.md` (Especificação técnica do hardening)
-- `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (Este relatório final)
-- `tests/unit/test_security_governance_audit.py` (Suíte automatizada de segurança de governança)
+- `alembic/versions/0004_evidence_fk_integrity.py` (Migration corretiva de FKs de Evidence para `RESTRICT`)
+- `tests/unit/test_revocation_behavior.py` (Suíte de testes comportamentais para cenários de revogação A, B e C)
+- `tests/integration/test_evidence_referential_protection.py` (Teste de integridade referencial em banco relacional)
 
 ---
 
 ## 3. Arquivos Modificados
 
-- `src/domain/entities/legal_version.py`
-- `src/domain/services/temporal_validator.py`
-- `src/domain/services/temporal_search_service.py`
-- `src/application/use_cases/legal/revoke_legal_document.py`
-- `src/application/use_cases/legal/revoke_legal_node.py`
-- `src/infrastructure/db/models/legal_version_model.py`
-- `src/infrastructure/db/models/legal_node_model.py`
-- `src/infrastructure/db/models/legal_relation_model.py`
-- `docs/DECISIONS.md`
+- `src/infrastructure/db/models/evidence_model.py` (Alterados `legal_document_id`, `legal_version_id` e `legal_node_id` de `SET NULL` para `RESTRICT`)
+- `alembic/versions/0003_legal_integrity_hardening.py` (Corrigido `downgrade()` eliminando `pass` e implementando reversão determinística)
+- `tests/unit/test_security_governance_audit.py` (Expandido auditor global para 8 tabelas/modelos ORM, 4 migrations e auditoria estática de DELETE)
+- `docs/LEGAL_INTEGRITY_HARDENING.md` (Atualizada especificação técnica)
+- `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (Este relatório)
 - `docs/CURRENT_STATE.md`
 - `docs/HANDOFF.md`
 - `docs/CHANGELOG.md`
+- `docs/DECISIONS.md`
 
 ---
 
-## 4. Correções Realizadas
+## 4. Migrations Criadas e Corrigidas
 
-1. **Eliminação de ON DELETE CASCADE:** Alterados todos os relacionamentos ORM e migrações para `ondelete="RESTRICT"`.
-2. **Fonte Única de Matemática Temporal:** Centralizada a semântica $[effective\_from, effective\_until)$ em `TemporalIntegrityValidator.is_date_in_range`.
-3. **Proibição de Auto-Relações:** Revogações sem ato revogador distinto disparam `MissingRevokingSourceError` (sem inventar `A REVOKES A`).
-4. **Resolução de Termos:** Conceituado "Temporal Closure / Version Lifecycle" para encerramento de vigência mantendo reprodutibilidade histórica perfeita.
+- **Migration `0003_legal_integrity_hardening.py`:** `downgrade()` corrigido com reversão determinística de FKs (sem `pass`).
+- **Migration `0004_evidence_fk_integrity.py`:** Nova migration aplicando `ON DELETE RESTRICT` nas Foreign Keys de `evidences` (`legal_document_id`, `legal_version_id`, `legal_node_id`).
 
 ---
 
-## 5. Migrations
+## 5. FKs Corrigidas
 
-- Migration `0003_legal_integrity_hardening.py` remove constraints com `CASCADE` das tabelas `legal_versions`, `legal_nodes` e `legal_relations` e recria com `ON DELETE RESTRICT`.
-
----
-
-## 6. Testes Executados
-
-- `test_audit_no_cascade_foreign_keys_in_orm_models`: PASS
-- `test_single_source_of_truth_for_temporal_math`: PASS
-- `test_audit_system_clock_not_used_for_legal_truth`: PASS
-- `test_audit_prohibit_self_referencing_revocation_relations`: PASS
-- `test_golden_historical_scenario_full_document_revocation`: PASS
-- `test_golden_historical_scenario_partial_revocation`: PASS
-- `test_half_open_interval_boundary_math`: PASS
-- `test_consecutive_versions_resolution`: PASS
-- `test_vacatio_legis_resolution`: PASS
-- `test_audit_version_series_overlap_detection`: PASS
-- `test_audit_version_series_gap_detection`: PASS
+- `evidences.legal_document_id` $\to$ `ON DELETE RESTRICT`
+- `evidences.legal_version_id` $\to$ `ON DELETE RESTRICT`
+- `evidences.legal_node_id` $\to$ `ON DELETE RESTRICT`
+- Confirmado que **ZERO** FKs jurídicas ou de proveniência possuem `CASCADE` ou `SET NULL`.
 
 ---
 
-## 7. Auditoria de FK
+## 6. Testes Comportamentais
 
-- Confirmado que **ZERO** tabelas jurídicas possuem `ON DELETE CASCADE`. Todas utilizam `ON DELETE RESTRICT`.
-
----
-
-## 8. Auditoria Temporal
-
-- Matemática $[effective\_from, effective\_until)$ validada com limite exclusivo no término ($T == effective\_until \implies \text{NOT EFFECTIVE}$).
+- **Cenário A (`test_scenario_a_missing_revoking_source`):** Tentar revogar nó/documento sem `revoking_node_id` dispara `MissingRevokingSourceError` (PASS).
+- **Cenário B (`test_scenario_b_auto_revocation_prohibited`):** Tentar auto-revogação (`revoking_node_id == target_node_id`) dispara `MissingRevokingSourceError` (PASS).
+- **Cenário C (`test_scenario_c_valid_revocation`):** Revogação válida entre nós distintos ($B \neq A$) cria relação `B REVOKES A` e NÃO `A REVOKES A` (PASS).
 
 ---
 
-## 9. Auditoria de Revogação
+## 7. Auditoria Global Automática (Respostas A a H)
 
-- Revogação não cria auto-relação (`source != target`), exige evidência oficial e preserva o histórico para datas anteriores à revogação.
+| Pergunta | Resposta Esperada | Resposta Obtida | Status |
+| :--- | :--- | :--- | :--- |
+| **A. Existem Foreign Keys jurídicas com CASCADE?** | `NÃO` | `NÃO` | PASS |
+| **B. Existem Foreign Keys jurídicas com SET NULL?** | `NÃO` | `NÃO` | PASS |
+| **C. Revogação utiliza DELETE?** | `NÃO` | `NÃO` | PASS |
+| **D. Existe auto-revogação?** | `NÃO` | `NÃO` | PASS |
+| **E. Evidence pode perder silenciosamente sua referência jurídica?** | `NÃO` | `NÃO` | PASS |
+| **F. A matemática temporal possui múltiplas implementações?** | `NÃO` | `NÃO` | PASS |
+| **G. O sistema usa relógio do sistema para determinar verdade jurídica?** | `NÃO` | `NÃO` | PASS |
+| **H. Existe downgrade incompleto em migrations novas/modificadas?** | `NÃO` | `NÃO` | PASS |
 
 ---
 
-## 10. Auditoria de Relógio
+## 8. Auditoria de DELETE
 
-- Confirmado que `datetime.now()` / `date.today()` jamais é utilizado como padrão implícito para determinar a Verdade Jurídica em consultas temporais.
+- Busca estática realizada em `src/`. Encontrado **0** comandos de `DELETE` ou `.delete()` sobre entidades normativas, evidências ou logs de auditoria.
 
 ---
 
-## 11. Auditoria de Infraestrutura Cloud
+## 9. Auditoria de Infraestrutura Cloud
 
 - **Neon PostgreSQL:** NÃO INTEGRADO
 - **Supabase Storage/DB:** NÃO INTEGRADO
@@ -103,8 +88,16 @@
 
 ---
 
-## 12. Resultado dos Testes
+## 10. Resultado da Suíte Completa
 
 - **STATUS:** `PASS`
 - **FAIL:** 0
-- **SKIPPED:** 0
+- **SKIPPED de Segurança/Integridade:** 0
+
+---
+
+## 11. Declarações Finais do Fechamento
+
+1. **FASE 5 NÃO INICIADA.** Nenhuma coleta de legislação real, parser real, RAG ou LLM foi introduzido.
+2. A LÉXORA possui 100% de integridade referencial, temporal e histórico-reprodutível.
+3. Repositório paralisado aguardando o Prompt oficial da Fase 5.

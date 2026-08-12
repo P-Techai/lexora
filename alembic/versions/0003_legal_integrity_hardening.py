@@ -67,5 +67,49 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Restaura constraints com RESTRICT caso necessário
-    pass
+    # Operação inversa determinística: restaura as constraints originais
+    with op.batch_alter_table('legal_relations', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_legal_relations_target_node_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_legal_relations_source_node_id', type_='foreignkey')
+        batch_op.create_foreign_key(
+            'legal_relations_target_node_id_fkey',
+            'legal_nodes',
+            ['target_node_id'],
+            ['id'],
+            ondelete='CASCADE'
+        )
+        batch_op.create_foreign_key(
+            'legal_relations_source_node_id_fkey',
+            'legal_nodes',
+            ['source_node_id'],
+            ['id'],
+            ondelete='CASCADE'
+        )
+
+    with op.batch_alter_table('legal_nodes', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_legal_nodes_parent_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_legal_nodes_legal_version_id', type_='foreignkey')
+        batch_op.create_foreign_key(
+            'legal_nodes_parent_id_fkey',
+            'legal_nodes',
+            ['parent_id'],
+            ['id'],
+            ondelete='CASCADE'
+        )
+        batch_op.create_foreign_key(
+            'legal_nodes_legal_version_id_fkey',
+            'legal_versions',
+            ['legal_version_id'],
+            ['id'],
+            ondelete='CASCADE'
+        )
+
+    with op.batch_alter_table('legal_versions', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_legal_versions_legal_document_id', type_='foreignkey')
+        batch_op.create_foreign_key(
+            'legal_versions_legal_document_id_fkey',
+            'legal_documents',
+            ['legal_document_id'],
+            ['id'],
+            ondelete='CASCADE'
+        )

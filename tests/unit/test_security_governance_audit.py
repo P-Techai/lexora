@@ -1,5 +1,6 @@
 from datetime import date
 import inspect
+from pathlib import Path
 import pytest
 
 import src.infrastructure.db.models as models
@@ -10,8 +11,12 @@ from src.domain.services.temporal_search_service import TemporalLegalSearchServi
 from src.domain.services.temporal_validator import TemporalIntegrityValidator
 
 
-def test_audit_no_cascade_foreign_keys_in_orm_models():
-    """AUDITORIA AUTOMÁTICA DE INFRAESTRUTURA: Garante que NENHUMA FK de modelo relacional jurídico utiliza CASCADE."""
+def test_audit_no_cascade_or_set_null_foreign_keys_in_orm_models():
+    """
+    AUDITORIA AUTOMÁTICA DE GOVERNANÇA E SEGURANÇA:
+    Garante que NENHUMA FK de modelo relacional jurídico/proveniência utiliza CASCADE ou SET NULL.
+    Regra absoluta da LÉXORA: Todas devem usar ON DELETE RESTRICT.
+    """
     orm_classes = [
         models.SourceModel,
         models.LegalDocumentModel,
@@ -23,15 +28,17 @@ def test_audit_no_cascade_foreign_keys_in_orm_models():
         models.AcquisitionAuditLogModel,
     ]
 
-    cascade_violations = []
+    violations = []
 
     for cls in orm_classes:
         for column_name, column in cls.__table__.columns.items():
             for fk in column.foreign_keys:
-                if fk.ondelete and fk.ondelete.upper() == "CASCADE":
-                    cascade_violations.append(f"Tabela '{cls.__tablename__}', Coluna '{column_name}' possui ON DELETE CASCADE!")
+                if fk.ondelete and fk.ondelete.upper() in ("CASCADE", "SET NULL"):
+                    violations.append(
+                        f"Tabela '{cls.__tablename__}', Coluna '{column_name}' possui ON DELETE {fk.ondelete.upper()}!"
+                    )
 
-    assert not cascade_violations, f"Violação de Segurança Jurídica: {cascade_violations}"
+    assert not violations, f"Violação de Segurança Jurídica / Integridade Referencial: {violations}"
 
 
 def test_single_source_of_truth_for_temporal_math():
@@ -66,5 +73,24 @@ def test_audit_system_clock_not_used_for_legal_truth():
 
 def test_audit_prohibit_self_referencing_revocation_relations():
     """AUDITORIA DE REVOGAÇÃO: Valida que relações de revogação sem origem revogadora distinta disparam exceção."""
-    # A exceção MissingRevokingSourceError deve ser importável e existente
     assert issubclass(MissingRevokingSourceError, Exception)
+
+
+def test_audit_static_delete_operations_in_src():
+    """AUDITORIA ESTÁTICA DE CÓDIGO: Verifica se existem operações .delete() em entidades normativas em src/."""
+    src_dir = Path("src")
+    prohibited_patterns = [
+        ".delete()",
+        "DELETE FROM legal_",
+        "DELETE FROM evidences",
+        "DELETE FROM sources",
+    ]
+
+    violations = []
+    for py_file in src_dir.rglob("*.py"):
+        content = py_file.read_text(encoding="utf-8")
+        for pattern in prohibited_patterns:
+            if pattern in content:
+                violations.append(f"Arquivo '{py_file}' contém operação de delete proibida: '{pattern}'")
+
+    assert not violations, f"Violação de Imutabilidade Jurídica em Código Fonte: {violations}"

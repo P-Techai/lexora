@@ -1,18 +1,21 @@
 # LÉXORA — Especificação de Hardening de Integridade Jurídica (Legal Integrity Hardening)
 
-Este documento detalha o conjunto de correções e proteções aplicadas na versão **`v0.6.2-legal-integrity-hardening`** para garantir a inviolabilidade da cadeia de Verdade Jurídica do **LÉXORA (LXR)**.
+Este documento detalha o conjunto de correções e proteções aplicadas na versão **`v0.6.3-final-integrity-closure`** para garantir a inviolabilidade da cadeia de Verdade Jurídica do **LÉXORA (LXR)**.
 
 ---
 
-# 1. Eliminação de Cascades Destrutivos (`ON DELETE RESTRICT`)
+# 1. Eliminação de Cascades e Set Null Destrutivos (`ON DELETE RESTRICT`)
 
-Nenhuma entidade da cadeia relacional jurídica pode possuir `ON DELETE CASCADE`. Todas as chaves estrangeiras foram ajustadas para `RESTRICT` tanto nos modelos ORM (`src/infrastructure/db/models/`) quanto na migration de banco `0003_legal_integrity_hardening.py`.
+Nenhuma entidade da cadeia relacional jurídica ou de proveniência pode possuir `ON DELETE CASCADE` ou `ON DELETE SET NULL`. Todas as chaves estrangeiras foram ajustadas para `RESTRICT` tanto nos modelos ORM (`src/infrastructure/db/models/`) quanto nas migrations de banco `0003_legal_integrity_hardening.py` e `0004_evidence_fk_integrity.py`.
 
 - `legal_versions.legal_document_id` $\to$ `ON DELETE RESTRICT`
 - `legal_nodes.legal_version_id` $\to$ `ON DELETE RESTRICT`
 - `legal_nodes.parent_id` $\to$ `ON DELETE RESTRICT`
 - `legal_relations.source_node_id` $\to$ `ON DELETE RESTRICT`
 - `legal_relations.target_node_id` $\to$ `ON DELETE RESTRICT`
+- `evidences.legal_document_id` $\to$ `ON DELETE RESTRICT`
+- `evidences.legal_version_id` $\to$ `ON DELETE RESTRICT`
+- `evidences.legal_node_id` $\to$ `ON DELETE RESTRICT`
 
 ---
 
@@ -27,7 +30,7 @@ A função `TemporalIntegrityValidator.is_date_in_range(target_date, effective_f
 
 # 3. Proibição de Auto-Relações de Revogação
 
-Uma norma não pode criar uma relação `DOCUMENTO A REVOKES DOCUMENTO A` para representar sua própria revogação. Se a revogação não possuir um nó/ato revogador distinto (`revoking_node_id`), o caso de uso dispara `MissingRevokingSourceError` sem inventar uma auto-relação.
+Uma norma não pode criar uma relação `DOCUMENTO A REVOKES DOCUMENTO A` para representar sua própria revogação. Se a revogação não possuir um nó/ato revogador distinto (`revoking_node_id`), os casos de uso `RevokeLegalDocumentUseCase` e `RevokeLegalNodeUseCase` disparam `MissingRevokingSourceError` sem inventar uma auto-relação.
 
 ---
 
@@ -37,7 +40,13 @@ O encerramento do período de vigência de uma versão histórica (`effective_un
 
 ---
 
-# 5. Status das Infraestruturas em Nuvem
+# 5. Downgrade Determinístico em Migrations
+
+Todas as migrations do Alembic (`0001`, `0002`, `0003`, `0004`) possuem métodos `upgrade()` e `downgrade()` completos e determinísticos, sem o uso de `pass` evasivo.
+
+---
+
+# 6. Status das Infraestruturas em Nuvem
 
 - **Neon PostgreSQL:** NÃO INTEGRADO (Provisionado para fase futura).
 - **Supabase Storage/DB:** NÃO INTEGRADO (Provisionado para fase futura).
