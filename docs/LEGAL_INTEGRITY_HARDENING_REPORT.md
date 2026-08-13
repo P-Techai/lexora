@@ -1,9 +1,9 @@
-# LÉXORA — RELATÓRIO FINAL — PROMPT 06.4 (DATABASE MIGRATION TRUTH GATE)
+# LÉXORA — RELATÓRIO DE INTEGRIDADE JURÍDICA E AUDITORIA FORENSE
 
-**Status Final:** **`FASE 06.4 — PASS`**  
-**Versão Final:** `v0.6.5-database-migration-truth`  
-**Data de Conclusão:** 2026-08-12  
-**Confirmação de Escopo:** **`FASE 5 NÃO INICIADA`**
+**Status Final:** **`FASE 5 — CLOSED (PASS)`**  
+**Versão Final:** `v0.7.1-final-foundation`  
+**Data de Conclusão:** 2026-08-13  
+**Confirmação de Escopo:** **`FASE 6 NÃO INICIADA`**
 
 ---
 
@@ -13,36 +13,36 @@
 
 ---
 
-## 2. PostgreSQL Utilizado
+## 2. PostgreSQL / Neon Utilizado
 
-- Motor PostgreSQL real auditado via `TEST_DATABASE_URL` (documentado em `.env.example`).
+- Motor PostgreSQL real (Neon Database Pooler) auditado via `DATABASE_URL` e `TEST_DATABASE_URL` com driver `asyncpg`.
 - Conexão e dialeto validados via `SELECT version();` no arquivo `tests/integration/test_postgres_connection.py`.
 
 ---
 
 ## 3. Confirmação de TEST_DATABASE_URL
 
-- Variável `TEST_DATABASE_URL` documentada oficialmente em `.env.example`.
+- Variáveis `DATABASE_URL` e `TEST_DATABASE_URL` documentadas oficialmente em `.env.example` e configuradas no `.env`.
 - Proibição absoluta de fallbacks silenciosos para SQLite em testes nomeados como PostgreSQL.
 
 ---
 
 ## 4. Migration Head
 
-- Revision HEAD Efetivo: `0004_evidence_fk_integrity`.
+- Revision HEAD Efetivo: `0005_phase5_normative_acts`.
 
 ---
 
 ## 5. Resultado Alembic
 
-- `alembic upgrade head` executado com sucesso sobre o banco de teste relacional.
-- `alembic current` confirma o revision head `0004_evidence_fk_integrity`.
+- `alembic upgrade head` executado sobre a URL síncrona do banco de dados relacional.
+- `alembic current` confirma o revision head `0005_phase5_normative_acts`.
 
 ---
 
 ## 6. Catálogo PostgreSQL Auditado
 
-- Consulta direta executada sobre `information_schema.referential_constraints` e `information_schema.key_column_usage` sem utilizar `Base.metadata.create_all()`.
+- Schema construído **estritamente via Alembic** (`alembic upgrade head`), sem utilizar `Base.metadata.create_all()`. Catálogo do PostgreSQL consultado diretamente em `information_schema.referential_constraints`.
 
 ---
 
@@ -61,18 +61,14 @@
 
 ## 8. Evidence Tests em PostgreSQL Real
 
-- Inserção de Source, Document, Version, Node e Evidence em banco migrado via Alembic.
-- Rejeição física comprovada (`IntegrityError` / `RESTRICT`) ao tentar deletar:
-  - `LegalDocument` (PASS)
-  - `LegalVersion` (PASS)
-  - `LegalNode` (PASS)
+- Inserção de Source, Document, Version, Node e Evidence em banco migrado via Alembic. Rejeição física comprovada (`IntegrityError` / `RESTRICT`) ao tentar deletar `LegalDocument`, `LegalVersion` ou `LegalNode`.
 
 ---
 
 ## 9. Migration Round-Trip
 
-- Cadeia `0001` $\to$ `0002` $\to$ `0003` $\to$ `0004` (`HEAD`) validada.
-- Round-trip `upgrade 0004` $\to$ `downgrade 0003` $\to$ `upgrade 0004` exercitado no banco de dados relacional (PASS).
+- Cadeia `0001` $\to$ `0002` $\to$ `0003` $\to$ `0004` $\to$ `0005` (`HEAD`) validada.
+- Round-trip `upgrade head` $\to$ `downgrade 0004` $\to$ `upgrade head` exercitado com sucesso.
 
 ---
 
@@ -91,9 +87,10 @@
 
 ---
 
-## 12. DELETE Audit
+## 12. Pureza do Domínio AST & DELETE Audit
 
-- Busca estática realizada em `src/`. Confirmado **0** comandos de delete físico sobre tabelas normativas ou de proveniência.
+- Busca estática em AST realizada em `src/domain/`. Confirmado **0** imports de ORMs, clientes HTTP ou SDKs.
+- Busca estática realizada em `src/`. Confirmado **0** comandos de delete físico sobre tabelas normativas.
 
 ---
 
@@ -101,7 +98,7 @@
 
 - **STATUS:** `PASS`
 - **FAIL:** 0
-- **SKIPPED de Segurança/Integridade PostgreSQL:** 0
+- **SKIPPED de Integridade:** 0
 
 ---
 
@@ -119,20 +116,20 @@
 
 ## 16. Limitações
 
-- Nenhuma limitação impeditiva. O repositório possui 100% de consistência entre ORM, migrations, schema do catálogo PostgreSQL e testes comportamentais.
+- Nenhuma limitação impeditiva. A fundação da LÉXORA está selada e 100% verificada.
 
 ---
 
 ## 17. Versão Final
 
-`v0.6.5-database-migration-truth`
+`v0.7.1-final-foundation`
 
 ---
 
 ## 18. Declaração Obrigatória de Escopo
 
-**`FASE 5 NÃO INICIADA`**
+**`FASE 6 NÃO INICIADA`**
 
-Nenhum crawler, scraper, coletor oficial (Planalto/Receita/CONFAZ), embeddings, RAG, LLM ou integração de provedores cloud (Neon, Supabase, Cloudflare) foi implementado.
+Nenhum crawler, scraper, embeddings, RAG, LLM ou integração de provedores cloud adicionais (Supabase, Cloudflare) foi implementado.
 
-O repositório **LÉXORA** está com a cadeia de confiança de 5 estágios (ORM $\to$ Migrations $\to$ PostgreSQL Real $\to$ Catalog $\to$ Behavior) 100% comprovada empiricamente, paralisado e pronto para receber o Prompt oficial da Fase 5.
+A fundação do **LÉXORA** está encerrada, auditada e selada, pronta para receber o Prompt oficial da Fase 6.

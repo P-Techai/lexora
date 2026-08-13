@@ -14,3 +14,12 @@ class DocumentHashCalculator:
             content_bytes = content
 
         return hashlib.sha256(content_bytes).hexdigest()
+
+    @staticmethod
+    def calculate_canonical_node_hash(node_type: str, identifier: str, label: str, text: str) -> str:
+        """
+        Calcula o hash canônico determinístico de um dispositivo normativo (LegalNode).
+        Independe de IDs gerados aleatoriamente (UUID), timestamps ou chaves de banco de dados.
+        """
+        canonical_representation = f"{node_type.upper()}|{identifier.lower()}|{label.strip()}|{text.strip()}"
+        return hashlib.sha256(canonical_representation.encode("utf-8")).hexdigest()

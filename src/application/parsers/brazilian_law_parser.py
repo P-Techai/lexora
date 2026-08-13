@@ -1,4 +1,3 @@
-import hashlib
 import re
 from typing import List, Tuple, Optional
 import uuid
@@ -6,6 +5,7 @@ import uuid
 from src.application.ports.structure_parser import LegalStructureParser
 from src.domain.entities.legal_node import LegalNode
 from src.domain.enums import LegalNodeType
+from src.domain.services.hash_service import DocumentHashCalculator
 from src.domain.services.normalization_service import LegalNormalizationService
 from src.domain.services.path_builder import LegalPathBuilder
 
@@ -41,6 +41,8 @@ class BrazilianLawParser(LegalStructureParser):
         # 1. Criação da Raiz Determinística NORMA
         title_line = lines[0]
         norma_id = f"node-norma-{version_id[:8]}"
+        norma_hash = DocumentHashCalculator.calculate_canonical_node_hash("NORMA", "norma-raiz", "Ato Normativo", title_line)
+        
         norma_node = LegalNode(
             id=norma_id,
             legal_version_id=version_id,
@@ -52,14 +54,12 @@ class BrazilianLawParser(LegalStructureParser):
             normalized_text=LegalNormalizationService.normalize_text(title_line),
             path="/norma",
             position=1,
-            content_hash=hashlib.sha256(title_line.encode("utf-8")).hexdigest()
+            content_hash=norma_hash
         )
         nodes.append(norma_node)
 
         # Pilha de rastreamento de nós ancestrais: List[Tuple[depth_level, node_id, node_path]]
-        # Níveis: NORMA=0, LIVRO=1, TITULO=2, CAPITULO=3, SECAO=4, ARTIGO=5, PARAGRAFO=6, INCISO=7, ALINEA=8, ITEM=9
         stack: List[Tuple[int, str, str]] = [(0, norma_id, "/norma")]
-        
         position_counter = 2
 
         # Padrões Regex Brasileiros
@@ -146,13 +146,17 @@ class BrazilianLawParser(LegalStructureParser):
             else:
                 warnings.append(f"Linha {position_counter} mantida como nó NOTA (Zero Silent Data Loss): '{line[:40]}...'")
 
-            # Desempilha nós de profundidade maior ou igual
             while stack and stack[-1][0] >= depth:
                 stack.pop()
 
             parent_depth, parent_id, parent_path = stack[-1] if stack else (0, norma_id, "/norma")
             node_path = LegalPathBuilder.build_path(parent_path, identifier)
             node_id = f"node-{uuid.uuid4().hex[:12]}"
+            
+            # Hash canônico determinístico
+            canonical_hash = DocumentHashCalculator.calculate_canonical_node_hash(
+                str(node_type), identifier, label, line
+            )
 
             node = LegalNode(
                 id=node_id,
@@ -165,7 +169,7 @@ class BrazilianLawParser(LegalStructureParser):
                 normalized_text=LegalNormalizationService.normalize_text(line),
                 path=node_path,
                 position=position_counter,
-                content_hash=hashlib.sha256(line.encode("utf-8")).hexdigest()
+                content_hash=canonical_hash
             )
             nodes.append(node)
             stack.append((depth, node_id, node_path))

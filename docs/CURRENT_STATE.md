@@ -1,27 +1,21 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-13  
-**Fase Atual:** FASE 5 — Ingestão Oficial de Legislação Brasileira Real  
-**Versão Atual:** `v0.7.0-official-ingestion-pilot`  
-**Status do Projeto:** FASE 5 — CONCLUÍDA (STATUS: PASS). Todas as 27 metas da FASE 5 concluídas: 1) Auditoria pré-implementação em `docs/PHASE5_PREIMPLEMENTATION_AUDIT.md`; 2) Neon PostgreSQL integrado via `DATABASE_URL`; 3) Porta `DocumentExtractor` e adaptador `HtmlTxtDocumentExtractor` desacoplados; 4) Extensível `BrazilianLawParser` (`brazilian-law-parser@1.0.0`) suportando a hierarquia completa (`NORMA` a `ITEM`) e numeração real brasileira; 5) Nó raiz `NORMA` determinístico (sem dependência de `nodes[0]`); 6) Adaptador real `HttpDocumentAcquisitionAdapter` com SSRF e rate limiting; 7) Dataset piloto em `docs/PHASE5_PILOT_DATASET.md` com testes golden em `test_golden_pilot_documents.py`; 8) Migration Alembic `0005_phase5_normative_acts.py`; 9) ADR-0013 e `docs/PHASE5_COMPLETION_GATE.md` (STATUS: PASS).
+**Fase Atual:** FASE 5 — CLOSED (Fundação Totalmente Auditada e Selada)  
+**Versão Atual:** `v0.7.1-final-foundation`  
+**Status do Projeto:** PROMPT 07.1 — PASS. Auditoria Forense Completa Concluída: 1) Pureza do domínio AST-level verificada (`src/domain/` sem ORM/HTTP/SDKs); 2) Hash de nó canônico determinístico em `DocumentHashCalculator.calculate_canonical_node_hash`; 3) Proteção de redirect HTTP em `SafeRedirectHandler`; 4) Suíte forense em `test_forensic_foundation_audit.py`; 5) Relatório forense publicado em `docs/FINAL_FOUNDATION_AUDIT.md`.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Integração Neon PostgreSQL:**
-  - `DATABASE_URL` e `TEST_DATABASE_URL` configurados para o pooler do Neon via driver `asyncpg`.
-- **Arquitetura de Extração e Parsing de Legislação Real Brasileira:**
-  - Porta `DocumentExtractor` e adaptador `HtmlTxtDocumentExtractor` isolando decodificação de formatos (HTML/TXT) do parsing normativo.
-  - `BrazilianLawParser` reconhecendo a hierarquia jurídica brasileira completa (`NORMA`, `LIVRO`, `TÍTULO`, `CAPÍTULO`, `SEÇÃO`, `SUBSEÇÃO`, `ARTIGO`, `PARÁGRAFO`, `INCISO`, `ALÍNEA`, `ITEM`, `ANEXO`).
-  - Preservação estrita do RAW TEXT e cálculo separado do NORMALIZED TEXT. Linhas não estruturadas viram nós `NOTA` (Zero Silent Data Loss).
-  - Nó raiz `NORMA` determinístico eliminando qualquer uso informal de `nodes[0]`.
-- **Aquisição HTTP Real com SSRF e Polidez:**
-  - `HttpDocumentAcquisitionAdapter` com limite de bytes, rate limiting (max 2 req/s) e auditoria de aquisição.
-- **Dataset Piloto e Golden Tests:**
-  - Pilot dataset registrado em `docs/PHASE5_PILOT_DATASET.md` com testes em `test_golden_pilot_documents.py`.
-- **Documentação & ADR-0013:**
-  - `docs/OFFICIAL_SOURCES.md`, `docs/PARSER_ARCHITECTURE.md`, `docs/DOCUMENT_EXTRACTION.md`, `docs/PHASE5_PILOT_DATASET.md`, `docs/PHASE5_COMPLETION_GATE.md` e `ADR-0013`.
+- **Selamento da Fundação (v0.7.1-final-foundation):**
+  - Verificação AST-level da pureza do domínio (`src/domain/`), confirmando zero dependências de ORMs, clientes HTTP ou SDKs externos.
+  - Refatoração do cálculo de hash de `LegalNode` para formato canônico determinístico (`DocumentHashCalculator.calculate_canonical_node_hash`), eliminando dependência de UUIDs.
+  - Re-validação de redirects HTTP contra regras de SSRF no `HttpDocumentAcquisitionAdapter`.
+  - Auditoria de segredos e higiene do repositório (`.env` no `.gitignore`).
+- **Documentação & Relatório Final:**
+  - `docs/FINAL_FOUNDATION_AUDIT.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: PASS).
 - **Status Cloud:** Neon = INTEGRADO VIA DATABASE_URL; Supabase = NÃO INTEGRADO; Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -78,6 +72,7 @@ lexora/
 │   ├── DATABASE_TRUTH_GATE.md
 │   ├── DECISIONS.md
 │   ├── DOCUMENT_EXTRACTION.md
+│   ├── FINAL_FOUNDATION_AUDIT.md
 │   ├── HANDOFF.md
 │   ├── INGESTION.md
 │   ├── LEGAL_INTEGRITY.md
@@ -201,6 +196,7 @@ lexora/
 │       ├── test_brazilian_law_parser.py
 │       ├── test_domain.py
 │       ├── test_domain_canonical.py
+│       ├── test_forensic_foundation_audit.py
 │       ├── test_ingestion_pipeline.py
 │       ├── test_ports.py
 │       ├── test_revocation_behavior.py

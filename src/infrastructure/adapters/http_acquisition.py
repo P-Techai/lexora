@@ -14,8 +14,24 @@ from src.domain.enums import ChangeStatus
 from src.domain.exceptions import AcquisitionFailedError, ArtifactTooLargeError, SSRFProtectionError
 
 
+class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Handler urllib customizado para re-validar redirects HTTP contra a politica de SSRF e governanca."""
+
+    def __init__(self, source_registry: SourceRegistryService, source: Source):
+        super().__init__()
+        self.source_registry = source_registry
+        self.source = source
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Valida a URL de destino do redirect contra a proteção SSRF e a allowlist da fonte
+        valid, warnings = self.source_registry.validate_acquisition_url(self.source, newurl)
+        if not valid:
+            raise SSRFProtectionError(f"Redirecionamento HTTP SSRF bloqueado para '{newurl}': {warnings}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
-    """Adaptador de aquisição HTTP real para coleta oficial de artefatos com proteção SSRF e rate limit."""
+    """Adaptador de aquisição HTTP real para coleta oficial de artefatos com proteção SSRF em requisição e redirect."""
 
     def __init__(self, source_registry: SourceRegistryService, max_bytes: int = 50 * 1024 * 1024):
         self.source_registry = source_registry
@@ -28,7 +44,7 @@ class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
         target_url: str,
         expected_hash: Optional[str] = None
     ) -> Tuple[RawArtifact, AcquisitionAuditLog, bytes]:
-        # 1. Validação de Segurança SSRF e Governança da Fonte
+        # 1. Validação de Segurança SSRF na URL de entrada
         url_valid, url_warnings = self.source_registry.validate_acquisition_url(source, target_url)
         if not url_valid:
             raise SSRFProtectionError(f"Segurança SSRF: URL '{target_url}' rejeitada para a fonte '{source.name}': {url_warnings}")
@@ -40,7 +56,10 @@ class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
             time.sleep(0.5 - elapsed)
         self._last_request_time = time.time()
 
-        # 3. Requisição HTTP Real
+        # 3. Construção do Opener com SafeRedirectHandler
+        redirect_handler = SafeRedirectHandler(self.source_registry, source)
+        opener = urllib.request.build_opener(redirect_handler)
+        
         req = urllib.request.Request(
             target_url,
             headers={
@@ -50,7 +69,7 @@ class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
 
         start_time = time.time()
         try:
-            with urllib.request.urlopen(req, timeout=30) as response:
+            with opener.open(req, timeout=30) as response:
                 http_status = response.status
                 content_type = response.headers.get("Content-Type", "text/html; charset=utf-8")
                 content_bytes = response.read(self.max_bytes + 1)
@@ -64,7 +83,7 @@ class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
 
         response_time_ms = int((time.time() - start_time) * 1000)
 
-        # 4. Cálculo SHA-256
+        # 4. Cálculo SHA-256 dos bytes brutos
         content_hash = hashlib.sha256(content_bytes).hexdigest()
         byte_size = len(content_bytes)
 
