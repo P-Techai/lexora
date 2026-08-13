@@ -1,6 +1,6 @@
 # LÉXORA — Plataforma Inteligente de Conhecimento Jurídico, Tributário e Contábil
 
-[![Status](https://img.shields.io/badge/Status-Foundation_v0.1.0-blue.svg)](docs/CURRENT_STATE.md)
+[![Status](https://img.shields.io/badge/Status-Phase_6.2_Sealed_v0.9.1-blue.svg)](docs/CURRENT_STATE.md)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean_Architecture_4_Layers-green.svg)](docs/ARCHITECTURE.md)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 

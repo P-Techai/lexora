@@ -1,4 +1,4 @@
-import uuid
+hashlib
 from typing import List, Optional
 
 from src.application.dto.context_pack import LegalContextPack
@@ -7,7 +7,7 @@ from src.domain.exceptions import ContextBudgetExceededError
 
 
 class LegalContextBuilder:
-    """Construtor determinístico de pacote de contexto (LegalContextPack) com controle rígido de orçamento."""
+    """Construtor determinístico de pacote de contexto (LegalContextPack) com controle rígido de orçamento e pack_id SHA-256."""
 
     def __init__(self, max_nodes: int = 10, max_characters: int = 15000):
         self.max_nodes = max_nodes
@@ -58,7 +58,15 @@ class LegalContextBuilder:
             total_chars += len(node_block)
 
         canonical_text = "\n".join(context_lines)
-        pack_id = f"pack-{uuid.uuid4().hex[:12]}"
+
+        # Geração de pack_id 100% determinística via SHA-256 (0 UUIDs aleatórios)
+        hash_payload = (
+            f"{retrieval_response.query}|{retrieval_response.normalized_query}|{retrieval_response.reference_date}|"
+            + "|".join(n.legal_node_id for n in selected_nodes) + "|"
+            + "|".join(n.content_hash for n in selected_nodes)
+        )
+        pack_hash = hashlib.sha256(hash_payload.encode("utf-8")).hexdigest()
+        pack_id = f"pack-{pack_hash[:16]}"
 
         provenance_summary = {
             "retrieved_count": len(candidates),

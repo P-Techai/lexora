@@ -1,24 +1,25 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-13  
-**Fase Atual:** FASE 6.2 — COMPLETE (Contextual Legal RAG & Guardrails de Resposta)  
-**Versão Atual:** `v0.9.0-contextual-legal-rag`  
-**Status da Fase 6.2:** **`FASE 6.2 = COMPLETE`**  
+**Fase Atual:** FASE 6.2 — SEALED (Selamento de Produção do RAG Jurídico Contextual)  
+**Versão Atual:** `v0.9.1-contextual-rag-production-lock`  
+**Status da Fase 6.2:** **`FASE 6.2 = SEALED`**  
 **Status da Fase 6.3:** **`FASE 6.3 = AUTHORIZED`**  
-**Status do Projeto:** PROMPT 09 — PASS. Conclusão da Camada de RAG Jurídico Contextual e Guardrails de Resposta: 1) Princípio `LLM ≠ SOURCE OF TRUTH` garantido em pipeline de 11 estágios; 2) Enum `LegalAnswerStatus` e DTO `LegalAnswer` estruturado; 3) `LegalContextPack` e `LegalContextBuilder` com controle rígido de orçamento; 4) Suíte de guardrails em `src/application/services/guardrails/` (`CitationValidator`, `TemporalAnswerGuard`, `ProvenanceGuard`, `ConflictGuard`, `AbstentionPolicy`, `LegalAnswerGuard`); 5) Proteção contra ataques de Prompt Injection em textos normativos; 6) Endpoint `POST /api/v1/legal/answer` na API FastAPI; 7) ADR-0016, `docs/LEGAL_RAG_ARCHITECTURE.md`, `docs/LEGAL_ANSWER_GUARDRAILS.md` e `docs/PHASE6_2_COMPLETION.md`.
+**Status do Projeto:** PROMPT 10 — PASS. Selamento Definitivo de Produção do RAG Jurídico Contextual: 1) Instanciação do gerador no endpoint HTTP `/api/v1/legal/answer` via `LegalAnswerGeneratorFactory.get_generator()` com bloqueio estrito de fallbacks silenciosos em produção (`ConfigurationError`); 2) Entidade `AnswerClaim` com validação de citação por afirmação; 3) Validação cruzada rigorosa dos 12 campos no `CitationValidator`; 4) IDs de `LegalContextPack` (`pack_id`) e `LegalAnswer` (`answer_id`) 100% determinísticos via SHA-256 (0 UUIDs aleatórios); 5) Suíte de 30 cenários de selamento em `tests/unit/test_phase6_2_production_lock.py`; 6) Documentação alinhada em `docs/PHASE6_2_PRODUCTION_LOCK.md`.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **RAG Jurídico Contextual & Guardrails de Resposta (v0.9.0-contextual-legal-rag):**
-  - Implementação da porta de gerador linguístico `LegalAnswerGenerator` e adaptador `MockLegalAnswerGenerator`.
-  - Construtor determinístico de contexto `LegalContextBuilder` limitando nós normativos e contagem de caracteres antes de enviar ao gerador.
-  - Orquestrador de validação `LegalAnswerGuard` aplicando 5 camadas de segurança: validação de citação (0 citações inventadas), vigência temporal na `reference_date`, proveniência de 5 níveis, detecção de conflitos de versão e abstenção estruturada.
-  - Proteção de prompt injection garantindo que textos de leis maliciosos são tratados estritamente como DADOS em aspas, sem executar instruções.
-  - Endpoint `POST /api/v1/legal/answer` publicado na API FastAPI.
+- **Selamento de Produção do RAG Jurídico Contextual (v0.9.1-contextual-rag-production-lock):**
+  - Eliminação de chamadas diretas a Mocks no endpoint HTTP `/api/v1/legal/answer`.
+  - Provedores carregados dinamicamente via `LegalAnswerGeneratorFactory`. Em ambiente de produção, falhas de configuração lançam `ConfigurationError` sem fallback para Mock.
+  - Estruturação de respostas com `AnswerClaim` exigindo que toda afirmação jurídica contenha citações válidas pertencentes ao `LegalContextPack`.
+  - Validação cruzada dos 12 campos de cada citação (`node_id`, `version_id`, `doc_id`, `node_type`, `identifier`, `label`, `excerpt`, `effective_from`, `effective_until`, `source_id`, `evidence_id`, `raw_artifact_hash`).
+  - Geração determinística de `pack_id` e `answer_id` garantindo reprodutibilidade idêntica.
+  - Suíte de 30 testes unitários e de integração validando a integridade da camada de RAG.
 - **Documentação & Relatórios Finais:**
-  - `ADR-0016-contextual-legal-rag.md`, `docs/LEGAL_RAG_ARCHITECTURE.md`, `docs/LEGAL_ANSWER_GUARDRAILS.md`, `docs/PHASE6_2_COMPLETION.md` (STATUS: COMPLETE / AUTHORIZED).
+  - `docs/PHASE6_2_PRODUCTION_LOCK.md` (STATUS: FASE 6.2 = SEALED / FASE 6.3 = AUTHORIZED).
 - **Status Cloud:** Neon = INTEGRADO VIA DATABASE_URL; Supabase = NÃO INTEGRADO; Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -101,6 +102,7 @@ lexora/
 │   ├── PHASE6_1_COMPLETION.md
 │   ├── PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md
 │   ├── PHASE6_2_COMPLETION.md
+│   ├── PHASE6_2_PRODUCTION_LOCK.md
 │   ├── PROJECT.md
 │   ├── PROJECT_MEMORY.md
 │   ├── RAW_ARTIFACTS.md
@@ -250,6 +252,7 @@ lexora/
 │       ├── test_ingestion_pipeline.py
 │       ├── test_legal_rag_guardrails.py
 │       ├── test_no_production_stubs.py
+│       ├── test_phase6_2_production_lock.py
 │       ├── test_ports.py
 │       ├── test_query_normalizer.py
 │       ├── test_reproducibility_and_reingestion.py
@@ -272,6 +275,6 @@ lexora/
 # 3. Próxima Tarefa Prioritária
 
 **FASE 6.3 — FISCAL BRAIN & DECISION ENGINE (AUTORIZADA)**
-1. Implementar a separação conceitual do Fiscal Brain para interpretação e enquadramento tributário com suporte à Reforma Tributária (IBS/CBS/IS);
-2. Construir o Decision Engine auditável determinístico com rastreabilidade total até a base legal da Fase 6.2;
-3. Integrar os 2 Cérebro (Legal Brain + Fiscal Brain) sob governança temporal.
+1. Implementar a separação conceitual do Fiscal Brain para classificação e regras tributárias (ICMS, PIS/COFINS, ISS, IBS/CBS/IS);
+2. Construir o Decision Engine auditável determinístico com rastreabilidade total até a base legal selada da Fase 6.2;
+3. Integrar os 2 Cérebros (Legal Brain + Fiscal Brain) sob a governança temporal.

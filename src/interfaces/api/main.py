@@ -12,14 +12,13 @@ from src.application.use_cases.retrieval.retrieve_and_answer import RetrieveAndA
 from src.application.use_cases.retrieval.retrieve_legal_information import RetrieveLegalInformationUseCase
 from src.domain.entities.legal_answer import LegalAnswer
 from src.domain.enums import DocumentType, Jurisdiction
-from src.infrastructure.adapters.factory import EmbeddingProviderFactory
-from src.infrastructure.adapters.mock_legal_answer_generator import MockLegalAnswerGenerator
+from src.infrastructure.adapters.factory import EmbeddingProviderFactory, LegalAnswerGeneratorFactory
 from src.infrastructure.db.session import get_db_session
 
 app = FastAPI(
     title="LÉXORA API",
     description="Plataforma inteligente de conhecimento jurídico, tributário e contábil brasileiro.",
-    version="0.9.0-contextual-legal-rag",
+    version="0.9.1-contextual-rag-production-lock",
 )
 
 
@@ -35,7 +34,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         app_name="LÉXORA (LXR)",
-        version="0.9.0-contextual-legal-rag"
+        version="0.9.1-contextual-rag-production-lock"
     )
 
 
@@ -105,8 +104,8 @@ async def retrieve_legal_evidence(request: LegalRetrieveApiRequest, session = De
 @app.post("/api/v1/legal/answer", response_model=LegalAnswer, tags=["Legal RAG"])
 async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(get_db_session)):
     """
-    Endpoint de Resposta Jurídica RAG Contextual com Guardrails de Validação e Proveniência.
-    Gera respostas fundamentadas em evidências normativas vigentes sem alucinação jurídica.
+    Endpoint de Resposta Jurídica RAG Contextual de Produção.
+    Instancia o gerador via LegalAnswerGeneratorFactory protegendo contra fallbacks de produção.
     """
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="A pergunta 'query' não pode estar vazia.")
@@ -136,7 +135,7 @@ async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(g
     )
 
     context_builder = LegalContextBuilder(max_nodes=request.top_k)
-    answer_generator = MockLegalAnswerGenerator()
+    answer_generator = LegalAnswerGeneratorFactory.get_generator()
 
     rag_use_case = RetrieveAndAnswerUseCase(
         retrieval_use_case=retrieval_use_case,
