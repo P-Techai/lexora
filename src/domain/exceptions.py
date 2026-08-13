@@ -83,3 +83,40 @@ class AcquisitionFailedError(LexoraDomainError):
 class RedirectNotAllowedError(LexoraDomainError):
     """Lançada quando um redirecionamento HTTP aponta para um domínio não autorizado."""
     pass
+
+
+class ConfigurationError(LexoraDomainError):
+    """Lançada quando há erro de configuração de ambiente ou provedor de produção desconfigurado."""
+    pass
+
+
+# --- Exceções de Contextual Legal RAG e Guardrails ---
+
+class LegalAnswerGenerationError(LexoraDomainError):
+    """Lançada quando ocorre uma falha na geração textual de resposta jurídica pelo gerador."""
+    pass
+
+
+class LegalAnswerValidationError(LexoraDomainError):
+    """Lançada quando a resposta gerada viola os guardrails jurídicos de validação."""
+    pass
+
+
+class CitationValidationError(LexoraDomainError):
+    """Lançada quando a resposta contém citação inventada, inexistente ou temporalmente inválida."""
+    pass
+
+
+class ProvenanceValidationError(LexoraDomainError):
+    """Lançada quando uma citação ou evidência possui a cadeia de proveniência em 5 níveis incompleta."""
+    pass
+
+
+class TemporalAnswerError(LexoraDomainError):
+    """Lançada quando a resposta utiliza um dispositivo fora da data de referência solicitada."""
+    pass
+
+
+class ContextBudgetExceededError(LexoraDomainError):
+    """Lançada quando a montagem do contexto excede o orçamento de caracteres/tokens permitido."""
+    pass

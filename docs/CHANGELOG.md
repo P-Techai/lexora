@@ -6,22 +6,30 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.9.0-contextual-legal-rag] - 2026-08-13
+
+### Adicionado
+- **Phase 6.2 — Contextual Legal RAG & Guardrails de Resposta (Prompt 09):**
+  - Implementação da porta `LegalAnswerGenerator` em `src/application/ports/legal_answer_generator.py` e adaptador `MockLegalAnswerGenerator`.
+  - Enum `LegalAnswerStatus` (`SUPPORTED`, `PARTIALLY_SUPPORTED`, `INSUFFICIENT_EVIDENCE`, `TEMPORAL_CONFLICT`, `TEMPORAL_GAP`, `PROVENANCE_FAILURE`, `CONFLICTING_SOURCES`, `ABSTAINED`) e DTO `LegalAnswer`.
+  - Construtor determinístico de pacote de contexto `LegalContextBuilder` com controle de orçamento (max nodes, max chars, deduplicação).
+  - Suíte de Guardrails em `src/application/services/guardrails/`:
+    - `CitationValidator` (rejeição de citações inventadas ou não fundamentadas).
+    - `TemporalAnswerGuard` (validação de vigência na `reference_date`).
+    - `ProvenanceGuard` (validação de proveniência de 5 níveis).
+    - `ConflictGuard` (detecção de conflitos de versões e lacunas).
+    - `AbstentionPolicy` (abstenção estruturada determinística).
+    - `LegalAnswerGuard` (orquestrador de validação).
+  - Proteção contra ataques de Prompt Injection em documentos normativos (tratados estritamente como DADOS não executáveis em aspas).
+  - Endpoint da API `POST /api/v1/legal/answer` publicado na FastAPI.
+  - Caso de uso `RetrieveAndAnswerUseCase` conectando recuperação de 7 estágios e geração/validação de 4 estágios (11 estágios no total).
+  - Suíte de testes unitários `test_legal_rag_guardrails.py` e teste de integração Golden E2E `test_golden_legal_rag_e2e.py`.
+  - Especificações `docs/LEGAL_RAG_ARCHITECTURE.md`, `docs/LEGAL_ANSWER_GUARDRAILS.md`, relatório `docs/PHASE6_2_COMPLETION.md` e ADR-0016.
+
+---
+
 ## [0.8.1-retrieval-production-closure] - 2026-08-13
 
 ### Adicionado
 - **Retrieval Implementation Closure & Production-Grade RAG Foundation (Prompt 08.1):**
-  - Endpoint HTTP `/api/v1/legal/retrieve` refatorado para executar a classe de uso real `RetrieveLegalInformationUseCase` contra os repositórios relacionais.
-  - Migration Alembic `0007_phase6_vector_fts.py` habilitando a extensão `vector` (pgvector) e a coluna `search_vector` (tsvector) para FTS nativo no PostgreSQL.
-  - `EmbeddingProviderFactory` para carregamento de provedores por variáveis de ambiente, com bloqueio estrito de fallbacks silenciosos para mocks em produção.
-  - Critério de desempate determinístico estável (`score DESC, content_hash ASC, legal_node_id ASC`).
-  - Suíte de testes de integração E2E `tests/integration/test_phase6_retrieval_end_to_end.py` (com chamadas HTTP reais e verificação de determinismo 10x).
-  - Auditoria estática de código produtivo `tests/unit/test_no_production_stubs.py` (0 stubs em `src/`).
-  - Relatório final `docs/PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md` (STATUS: FASE 6.1 = COMPLETE / FASE 6.2 = AUTHORIZED).
-
----
-
-## [0.8.0-retrieval-foundation] - 2026-08-13
-
-### Adicionado
-- **Phase 6.1 — Hybrid Legal Retrieval & RAG Foundation (Prompt 08):**
-  - Declarada a porta `EmbeddingProvider` em `src/application/ports/embedding_provider.py` com o adaptador determinístico `MockEmbeddingProvider` (1536 dimensões).
+  - Endpoint HTTP `/api/v1/legal/retrieve` refatorado para executar a classe de uso real `RetrieveLegalInformationUseCase`.

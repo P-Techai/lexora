@@ -1,24 +1,24 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-13  
-**Fase Atual:** FASE 6.1 — COMPLETE (Fechamento Definitivo do Retrieval de Produção)  
-**Versão Atual:** `v0.8.1-retrieval-production-closure`  
-**Status da Fase 6.1:** **`FASE 6.1 = COMPLETE`**  
-**Status da Fase 6.2:** **`FASE 6.2 = AUTHORIZED`**  
-**Status do Projeto:** PROMPT 08.1 — PASS. Fechamento Definitivo da Camada de Recuperação Híbrida Jurídica de Produção: 1) Endpoint HTTP `/api/v1/legal/retrieve` refatorado para executar o pipeline real `RetrieveLegalInformationUseCase`; 2) FTS nativo e pgvector configurados na migration Alembic `0007_phase6_vector_fts.py`; 3) `EmbeddingProviderFactory` implementada com bloqueio de fallbacks silenciosos em produção (0 stubs em prod); 4) Desempate determinístico rigoroso (`score DESC, content_hash ASC, legal_node_id ASC`); 5) Validação de proveniência de 5 níveis e filtragem temporal por data de referência $T$; 6) Suíte de testes E2E `test_phase6_retrieval_end_to_end.py` e auditoria `test_no_production_stubs.py`; 7) Documentação final em `docs/PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md`.
+**Fase Atual:** FASE 6.2 — COMPLETE (Contextual Legal RAG & Guardrails de Resposta)  
+**Versão Atual:** `v0.9.0-contextual-legal-rag`  
+**Status da Fase 6.2:** **`FASE 6.2 = COMPLETE`**  
+**Status da Fase 6.3:** **`FASE 6.3 = AUTHORIZED`**  
+**Status do Projeto:** PROMPT 09 — PASS. Conclusão da Camada de RAG Jurídico Contextual e Guardrails de Resposta: 1) Princípio `LLM ≠ SOURCE OF TRUTH` garantido em pipeline de 11 estágios; 2) Enum `LegalAnswerStatus` e DTO `LegalAnswer` estruturado; 3) `LegalContextPack` e `LegalContextBuilder` com controle rígido de orçamento; 4) Suíte de guardrails em `src/application/services/guardrails/` (`CitationValidator`, `TemporalAnswerGuard`, `ProvenanceGuard`, `ConflictGuard`, `AbstentionPolicy`, `LegalAnswerGuard`); 5) Proteção contra ataques de Prompt Injection em textos normativos; 6) Endpoint `POST /api/v1/legal/answer` na API FastAPI; 7) ADR-0016, `docs/LEGAL_RAG_ARCHITECTURE.md`, `docs/LEGAL_ANSWER_GUARDRAILS.md` e `docs/PHASE6_2_COMPLETION.md`.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Fechamento Definitivo do Retrieval de Produção (v0.8.1-retrieval-production-closure):**
-  - Execução real do pipeline de busca no endpoint `POST /api/v1/legal/retrieve` via `RetrieveLegalInformationUseCase`.
-  - Migration `0007_phase6_vector_fts.py` habilitando a extensão `vector` no PostgreSQL/Neon e adicionando coluna `search_vector` para FTS nativo.
-  - Bloqueio de fallbacks silenciosos para mocks em ambiente de produção via `EmbeddingProviderFactory`.
-  - Desempate determinístico estável (`score DESC, content_hash ASC, legal_node_id ASC`) mantendo reprodutibilidade 100% idêntica em 10 execuções sequenciais.
-  - Testes E2E de integração (`test_phase6_retrieval_end_to_end.py`) e auditoria de código produtivo (`test_no_production_stubs.py`).
+- **RAG Jurídico Contextual & Guardrails de Resposta (v0.9.0-contextual-legal-rag):**
+  - Implementação da porta de gerador linguístico `LegalAnswerGenerator` e adaptador `MockLegalAnswerGenerator`.
+  - Construtor determinístico de contexto `LegalContextBuilder` limitando nós normativos e contagem de caracteres antes de enviar ao gerador.
+  - Orquestrador de validação `LegalAnswerGuard` aplicando 5 camadas de segurança: validação de citação (0 citações inventadas), vigência temporal na `reference_date`, proveniência de 5 níveis, detecção de conflitos de versão e abstenção estruturada.
+  - Proteção de prompt injection garantindo que textos de leis maliciosos são tratados estritamente como DADOS em aspas, sem executar instruções.
+  - Endpoint `POST /api/v1/legal/answer` publicado na API FastAPI.
 - **Documentação & Relatórios Finais:**
-  - `docs/PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md` (STATUS: FASE 6.1 = COMPLETE / FASE 6.2 = AUTHORIZED).
+  - `ADR-0016-contextual-legal-rag.md`, `docs/LEGAL_RAG_ARCHITECTURE.md`, `docs/LEGAL_ANSWER_GUARDRAILS.md`, `docs/PHASE6_2_COMPLETION.md` (STATUS: COMPLETE / AUTHORIZED).
 - **Status Cloud:** Neon = INTEGRADO VIA DATABASE_URL; Supabase = NÃO INTEGRADO; Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -69,7 +69,8 @@ lexora/
 │   │   ├── ADR-0012-legal-integrity-hardening.md
 │   │   ├── ADR-0013-brazilian-legal-parsers-and-normative-acts.md
 │   │   ├── ADR-0014-final-foundation-production-contract.md
-│   │   └── ADR-0015-hybrid-legal-retrieval.md
+│   │   ├── ADR-0015-hybrid-legal-retrieval.md
+│   │   └── ADR-0016-contextual-legal-rag.md
 │   ├── ACQUISITION.md
 │   ├── AGENT_PROTOCOL.md
 │   ├── ARCHITECTURE.md
@@ -85,10 +86,12 @@ lexora/
 │   ├── FINAL_FOUNDATION_LOCK_REPORT.md
 │   ├── HANDOFF.md
 │   ├── INGESTION.md
+│   ├── LEGAL_ANSWER_GUARDRAILS.md
 │   ├── LEGAL_INTEGRITY.md
 │   ├── LEGAL_INTEGRITY_HARDENING.md
 │   ├── LEGAL_INTEGRITY_HARDENING_REPORT.md
 │   ├── LEGAL_MODEL.md
+│   ├── LEGAL_RAG_ARCHITECTURE.md
 │   ├── LEGAL_TRUTH_READINESS.md
 │   ├── OFFICIAL_SOURCES.md
 │   ├── PARSER_ARCHITECTURE.md
@@ -97,6 +100,7 @@ lexora/
 │   ├── PHASE5_PREIMPLEMENTATION_AUDIT.md
 │   ├── PHASE6_1_COMPLETION.md
 │   ├── PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md
+│   ├── PHASE6_2_COMPLETION.md
 │   ├── PROJECT.md
 │   ├── PROJECT_MEMORY.md
 │   ├── RAW_ARTIFACTS.md
@@ -116,6 +120,7 @@ lexora/
 │   ├── application/
 │   │   ├── dto/
 │   │   │   ├── acquisition_dto.py
+│   │   │   ├── context_pack.py
 │   │   │   ├── ingestion_dto.py
 │   │   │   ├── retrieval_dto.py
 │   │   │   └── temporal_dto.py
@@ -126,14 +131,23 @@ lexora/
 │   │   │   ├── database_provider.py
 │   │   │   ├── document_extractor.py
 │   │   │   ├── embedding_provider.py
+│   │   │   ├── legal_answer_generator.py
 │   │   │   ├── llm_provider.py
 │   │   │   ├── repositories.py
 │   │   │   ├── retrieval_ports.py
 │   │   │   ├── storage_provider.py
 │   │   │   └── structure_parser.py
 │   │   ├── services/
+│   │   │   ├── context_builder.py
 │   │   │   ├── embedding_indexer.py
-│   │   │   └── source_registry.py
+│   │   │   ├── source_registry.py
+│   │   │   └── guardrails/
+│   │   │       ├── abstention_policy.py
+│   │   │       ├── answer_guard.py
+│   │   │       ├── citation_validator.py
+│   │   │       ├── conflict_guard.py
+│   │   │       ├── provenance_guard.py
+│   │   │       └── temporal_guard.py
 │   │   └── use_cases/
 │   │       ├── legal/
 │   │       │   ├── add_legal_nodes.py
@@ -147,12 +161,14 @@ lexora/
 │   │       │   ├── revoke_legal_node.py
 │   │       │   └── validate_temporal_integrity.py
 │   │       └── retrieval/
+│   │           ├── retrieve_and_answer.py
 │   │           ├── retrieve_legal_evidence.py
 │   │           └── retrieve_legal_information.py
 │   ├── domain/
 │   │   ├── entities/
 │   │   │   ├── acquisition_audit_log.py
 │   │   │   ├── evidence.py
+│   │   │   ├── legal_answer.py
 │   │   │   ├── legal_document.py
 │   │   │   ├── legal_embedding.py
 │   │   │   ├── legal_node.py
@@ -183,6 +199,7 @@ lexora/
 │   │   │   ├── local_storage.py
 │   │   │   ├── mock_acquisition.py
 │   │   │   ├── mock_embedding.py
+│   │   │   ├── mock_legal_answer_generator.py
 │   │   │   └── mock_llm.py
 │   │   └── db/
 │   │       ├── models/
@@ -211,6 +228,7 @@ lexora/
 │   │   ├── test_end_to_end_acquisition_ingestion.py
 │   │   ├── test_evidence_referential_protection.py
 │   │   ├── test_golden_historical_scenario.py
+│   │   ├── test_golden_legal_rag_e2e.py
 │   │   ├── test_golden_pilot_documents.py
 │   │   ├── test_golden_temporal_provenance_retrieval.py
 │   │   ├── test_phase6_retrieval_end_to_end.py
@@ -230,6 +248,7 @@ lexora/
 │       ├── test_final_foundation_contract.py
 │       ├── test_forensic_foundation_audit.py
 │       ├── test_ingestion_pipeline.py
+│       ├── test_legal_rag_guardrails.py
 │       ├── test_no_production_stubs.py
 │       ├── test_ports.py
 │       ├── test_query_normalizer.py
@@ -252,7 +271,7 @@ lexora/
 
 # 3. Próxima Tarefa Prioritária
 
-**FASE 6.2 — Contextual Legal RAG & Guardrails de Resposta (AUTORIZADA)**
-1. Implementar a porta `LegalLlmProvider` para síntese jurídica orientada a evidências;
-2. Construir guardrails determinísticos contra alucinação jurídica (a LLM é proibida de inferir artigos ou fatos jurídicos não contidos nas evidências enviadas);
-3. Exigir que 100% da resposta gerada inclua citações de evidência e a data de referência temporal.
+**FASE 6.3 — FISCAL BRAIN & DECISION ENGINE (AUTORIZADA)**
+1. Implementar a separação conceitual do Fiscal Brain para interpretação e enquadramento tributário com suporte à Reforma Tributária (IBS/CBS/IS);
+2. Construir o Decision Engine auditável determinístico com rastreabilidade total até a base legal da Fase 6.2;
+3. Integrar os 2 Cérebro (Legal Brain + Fiscal Brain) sob governança temporal.
