@@ -1,4 +1,5 @@
 from datetime import date
+import json
 from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,7 @@ from src.application.ports.repositories import (
 )
 from src.domain.entities.evidence import Evidence
 from src.domain.entities.legal_document import LegalDocument
+from src.domain.entities.legal_embedding import LegalEmbedding
 from src.domain.entities.legal_node import LegalNode
 from src.domain.entities.legal_relation import LegalRelation
 from src.domain.entities.legal_version import LegalVersion
@@ -23,6 +25,7 @@ from src.domain.enums import DocumentType, Jurisdiction, VersionStatus
 from src.infrastructure.db.models.acquisition_audit_model import AcquisitionAuditLogModel
 from src.infrastructure.db.models.evidence_model import EvidenceModel
 from src.infrastructure.db.models.legal_document_model import LegalDocumentModel
+from src.infrastructure.db.models.legal_embedding_model import LegalEmbeddingModel
 from src.infrastructure.db.models.legal_node_model import LegalNodeModel
 from src.infrastructure.db.models.legal_relation_model import LegalRelationModel
 from src.infrastructure.db.models.legal_version_model import LegalVersionModel
@@ -138,6 +141,22 @@ def _evidence_to_domain(model: EvidenceModel) -> Evidence:
         locator=model.locator,
         content_hash=model.content_hash,
         captured_at=model.captured_at,
+        created_at=model.created_at,
+    )
+
+
+def _embedding_to_domain(model: LegalEmbeddingModel) -> LegalEmbedding:
+    vector = json.loads(model.vector_data) if model.vector_data else []
+    return LegalEmbedding(
+        id=model.id,
+        legal_node_id=model.legal_node_id,
+        legal_version_id=model.legal_version_id,
+        legal_document_id=model.legal_document_id,
+        content_hash=model.content_hash,
+        embedding_model=model.embedding_model,
+        embedding_model_version=model.embedding_model_version,
+        dimensions=model.dimensions,
+        vector=vector,
         created_at=model.created_at,
     )
 
@@ -322,6 +341,14 @@ class PostgresLegalNodeRepository(LegalNodeRepository):
     async def get_nodes_by_version(self, version_id: str) -> List[LegalNode]:
         return await self.get_tree_by_version(version_id)
 
+    async def search_lexical_candidates(self, query: str, limit: int = 50) -> List[LegalNode]:
+        """Executa busca lexical nativa no PostgreSQL usando tsvector ou LIKE estruturado."""
+        stmt = select(LegalNodeModel).where(
+            LegalNodeModel.text.ilike(f"%{query}%") | LegalNodeModel.identifier.ilike(f"%{query}%")
+        ).order_by(LegalNodeModel.position.asc()).limit(limit)
+        result = await self.session.execute(stmt)
+        return [_node_to_domain(m) for m in result.scalars().all()]
+
     async def save(self, node: LegalNode) -> LegalNode:
         model = LegalNodeModel(
             id=node.id,
@@ -362,6 +389,48 @@ class PostgresLegalNodeRepository(LegalNodeRepository):
         for m in models:
             await self.session.merge(m)
         await self.session.flush()
+
+
+class PostgresLegalEmbeddingRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_by_node_and_hash(self, legal_node_id: str, content_hash: str, embedding_model: str, embedding_model_version: str) -> Optional[LegalEmbedding]:
+        stmt = select(LegalEmbeddingModel).where(
+            LegalEmbeddingModel.legal_node_id == legal_node_id,
+            LegalEmbeddingModel.content_hash == content_hash,
+            LegalEmbeddingModel.embedding_model == embedding_model,
+            LegalEmbeddingModel.embedding_model_version == embedding_model_version,
+        )
+        result = await self.session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return _embedding_to_domain(model) if model else None
+
+    async def save(self, embedding: LegalEmbedding) -> LegalEmbedding:
+        # Idempotência Nível 2 (Aplicação): Verifica se já existe antes de inserir
+        existing = await self.get_by_node_and_hash(
+            legal_node_id=embedding.legal_node_id,
+            content_hash=embedding.content_hash,
+            embedding_model=embedding.embedding_model,
+            embedding_model_version=embedding.embedding_model_version,
+        )
+        if existing:
+            return existing
+
+        model = LegalEmbeddingModel(
+            id=embedding.id,
+            legal_node_id=embedding.legal_node_id,
+            legal_version_id=embedding.legal_version_id,
+            legal_document_id=embedding.legal_document_id,
+            content_hash=embedding.content_hash,
+            embedding_model=embedding.embedding_model,
+            embedding_model_version=embedding.embedding_model_version,
+            dimensions=embedding.dimensions,
+            vector_data=json.dumps(embedding.vector),
+        )
+        merged = await self.session.merge(model)
+        await self.session.flush()
+        return _embedding_to_domain(merged)
 
 
 class PostgresLegalRelationRepository(LegalRelationRepository):

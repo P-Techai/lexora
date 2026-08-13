@@ -1,24 +1,24 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-13  
-**Fase Atual:** FASE 6.1 — COMPLETE (Hybrid Legal Retrieval & RAG Foundation)  
-**Versão Atual:** `v0.8.0-retrieval-foundation`  
+**Fase Atual:** FASE 6.1 — COMPLETE (Fechamento Definitivo do Retrieval de Produção)  
+**Versão Atual:** `v0.8.1-retrieval-production-closure`  
 **Status da Fase 6.1:** **`FASE 6.1 = COMPLETE`**  
 **Status da Fase 6.2:** **`FASE 6.2 = AUTHORIZED`**  
-**Status do Projeto:** PROMPT 08 — PASS. Conclusão da Camada de Recuperação Híbrida Jurídica: 1) Porta `EmbeddingProvider` e `MockEmbeddingProvider` (1536 dimensões); 2) `CanonicalRetrievalTextBuilder` incorporando a hierarquia normativa ancestral (`Norma > Livro > Título > Capítulo > Seção > Subseção > Artigo > Parágrafo > Inciso > Alínea > Item`); 3) Migration Alembic `0006_phase6_retrieval.py` e ORM `LegalEmbeddingModel`; 4) `LegalQueryNormalizer` e `HybridLegalRetrievalService` com reranking determinístico e filtragem temporal obrigatoria; 5) Validação da cadeia de proveniência de 5 níveis; 6) Endpoint `POST /api/v1/legal/retrieve` em `src/interfaces/api/main.py`; 7) ADR-0015, `docs/RETRIEVAL_ARCHITECTURE.md` e `docs/PHASE6_1_COMPLETION.md`.
+**Status do Projeto:** PROMPT 08.1 — PASS. Fechamento Definitivo da Camada de Recuperação Híbrida Jurídica de Produção: 1) Endpoint HTTP `/api/v1/legal/retrieve` refatorado para executar o pipeline real `RetrieveLegalInformationUseCase`; 2) FTS nativo e pgvector configurados na migration Alembic `0007_phase6_vector_fts.py`; 3) `EmbeddingProviderFactory` implementada com bloqueio de fallbacks silenciosos em produção (0 stubs em prod); 4) Desempate determinístico rigoroso (`score DESC, content_hash ASC, legal_node_id ASC`); 5) Validação de proveniência de 5 níveis e filtragem temporal por data de referência $T$; 6) Suíte de testes E2E `test_phase6_retrieval_end_to_end.py` e auditoria `test_no_production_stubs.py`; 7) Documentação final em `docs/PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md`.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Recuperação Híbrida Jurídica (v0.8.0-retrieval-foundation):**
-  - Implementação da porta `EmbeddingProvider` em `src/application/ports/embedding_provider.py` sem dependência de SDKs de fornecedores de IA no domínio.
-  - Construtor canônico de texto para embedding (`CanonicalRetrievalTextBuilder`) que preserva o contexto normativo completo da árvore.
-  - Tabela `legal_node_embeddings` criada na migration Alembic `0006_phase6_retrieval.py` com restrição `UNIQUE` em `(legal_node_id, content_hash, embedding_model, embedding_model_version)` para idempotência.
-  - Serviço `HybridLegalRetrievalService` realizando mesclagem lexical + semântica com reranking determinístico (`S_final = 0.35 * lex + 0.35 * sem + 0.10 * auth + 0.20 * exact_bonus`), filtragem temporal de vigência e auditoria de proveniência.
-  - Endpoint `POST /api/v1/legal/retrieve` publicado na API FastAPI.
+- **Fechamento Definitivo do Retrieval de Produção (v0.8.1-retrieval-production-closure):**
+  - Execução real do pipeline de busca no endpoint `POST /api/v1/legal/retrieve` via `RetrieveLegalInformationUseCase`.
+  - Migration `0007_phase6_vector_fts.py` habilitando a extensão `vector` no PostgreSQL/Neon e adicionando coluna `search_vector` para FTS nativo.
+  - Bloqueio de fallbacks silenciosos para mocks em ambiente de produção via `EmbeddingProviderFactory`.
+  - Desempate determinístico estável (`score DESC, content_hash ASC, legal_node_id ASC`) mantendo reprodutibilidade 100% idêntica em 10 execuções sequenciais.
+  - Testes E2E de integração (`test_phase6_retrieval_end_to_end.py`) e auditoria de código produtivo (`test_no_production_stubs.py`).
 - **Documentação & Relatórios Finais:**
-  - `ADR-0015-hybrid-legal-retrieval.md`, `docs/RETRIEVAL_ARCHITECTURE.md`, `docs/PHASE6_1_COMPLETION.md` (STATUS: COMPLETE / AUTHORIZED).
+  - `docs/PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md` (STATUS: FASE 6.1 = COMPLETE / FASE 6.2 = AUTHORIZED).
 - **Status Cloud:** Neon = INTEGRADO VIA DATABASE_URL; Supabase = NÃO INTEGRADO; Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -51,7 +51,8 @@ lexora/
 │       ├── 0003_legal_integrity_hardening.py
 │       ├── 0004_evidence_fk_integrity.py
 │       ├── 0005_phase5_normative_acts.py
-│       └── 0006_phase6_retrieval.py
+│       ├── 0006_phase6_retrieval.py
+│       └── 0007_phase6_vector_fts.py
 ├── docs/
 │   ├── adr/
 │   │   ├── ADR-0001-clean-architecture.md
@@ -95,6 +96,7 @@ lexora/
 │   ├── PHASE5_PILOT_DATASET.md
 │   ├── PHASE5_PREIMPLEMENTATION_AUDIT.md
 │   ├── PHASE6_1_COMPLETION.md
+│   ├── PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md
 │   ├── PROJECT.md
 │   ├── PROJECT_MEMORY.md
 │   ├── RAW_ARTIFACTS.md
@@ -145,7 +147,8 @@ lexora/
 │   │       │   ├── revoke_legal_node.py
 │   │       │   └── validate_temporal_integrity.py
 │   │       └── retrieval/
-│   │           └── retrieve_legal_evidence.py
+│   │           ├── retrieve_legal_evidence.py
+│   │           └── retrieve_legal_information.py
 │   ├── domain/
 │   │   ├── entities/
 │   │   │   ├── acquisition_audit_log.py
@@ -174,6 +177,7 @@ lexora/
 │   │   └── exceptions.py
 │   ├── infrastructure/
 │   │   ├── adapters/
+│   │   │   ├── factory.py
 │   │   │   ├── html_txt_extractor.py
 │   │   │   ├── http_acquisition.py
 │   │   │   ├── local_storage.py
@@ -209,6 +213,7 @@ lexora/
 │   │   ├── test_golden_historical_scenario.py
 │   │   ├── test_golden_pilot_documents.py
 │   │   ├── test_golden_temporal_provenance_retrieval.py
+│   │   ├── test_phase6_retrieval_end_to_end.py
 │   │   ├── test_postgres_connection.py
 │   │   ├── test_postgres_evidence_referential_protection.py
 │   │   ├── test_postgres_real.py
@@ -225,6 +230,7 @@ lexora/
 │       ├── test_final_foundation_contract.py
 │       ├── test_forensic_foundation_audit.py
 │       ├── test_ingestion_pipeline.py
+│       ├── test_no_production_stubs.py
 │       ├── test_ports.py
 │       ├── test_query_normalizer.py
 │       ├── test_reproducibility_and_reingestion.py
@@ -247,6 +253,6 @@ lexora/
 # 3. Próxima Tarefa Prioritária
 
 **FASE 6.2 — Contextual Legal RAG & Guardrails de Resposta (AUTORIZADA)**
-1. Implementar a porta `LegalLlmProvider` para geração de respostas orientadas exclusivamente por evidências recuperadas;
+1. Implementar a porta `LegalLlmProvider` para síntese jurídica orientada a evidências;
 2. Construir guardrails determinísticos contra alucinação jurídica (a LLM é proibida de inferir artigos ou fatos jurídicos não contidos nas evidências enviadas);
 3. Exigir que 100% da resposta gerada inclua citações de evidência e a data de referência temporal.

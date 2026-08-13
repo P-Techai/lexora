@@ -6,8 +6,8 @@ Este documento orienta novos agentes de IA e desenvolvedores sobre como assumir 
 
 # 1. Status do Projeto
 
-- **Fase Atual:** FASE 6.1 — COMPLETE (Hybrid Legal Retrieval & RAG Foundation)
-- **Versão Atual:** `v0.8.0-retrieval-foundation`
+- **Fase Atual:** FASE 6.1 — COMPLETE (Fechamento Definitivo do Retrieval de Produção)
+- **Versão Atual:** `v0.8.1-retrieval-production-closure`
 - **Status da Fase 6.1:** **`FASE 6.1 = COMPLETE`**
 - **Status da Fase 6.2:** **`FASE 6.2 = AUTHORIZED`** (Pronta para Início Imediato)
 
@@ -23,12 +23,11 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 4. [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md)
 5. [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
 6. [docs/HANDOFF.md](docs/HANDOFF.md)
-7. [docs/PHASE6_1_COMPLETION.md](docs/PHASE6_1_COMPLETION.md)
+7. [docs/PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md](docs/PHASE6_1_RETRIEVAL_PRODUCTION_CLOSURE.md)
 8. [docs/RETRIEVAL_ARCHITECTURE.md](docs/RETRIEVAL_ARCHITECTURE.md)
-9. [docs/FINAL_FOUNDATION_LOCK_REPORT.md](docs/FINAL_FOUNDATION_LOCK_REPORT.md)
-10. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
-11. Regras em [.agents/rules/](.agents/rules/)
-12. Código em `src/` e testes em `tests/`.
+9. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
+10. Regras em [.agents/rules/](.agents/rules/)
+11. Código em `src/` e testes em `tests/`.
 
 ---
 
@@ -46,7 +45,7 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 # 4. Próxima Tarefa Prioritária
 
 **Próxima Fase:** FASE 6.2 — Contextual Legal RAG & Guardrails de Resposta (**AUTORIZADA**)  
-**Versão Atual:** `v0.8.0-retrieval-foundation`  
+**Versão Atual:** `v0.8.1-retrieval-production-closure`  
 **Tarefa Imediata:** 
 1. Iniciar o desenvolvimento da FASE 6.2;
 2. Projetar a porta `LegalLlmProvider` para síntese jurídica orientada a evidências;
