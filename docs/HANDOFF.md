@@ -6,10 +6,10 @@ Este documento orienta novos agentes de IA e desenvolvedores sobre como assumir 
 
 # 1. Status do Projeto
 
-- **Fase Atual:** FASE 5 — CLOSED (Fundação Encerrada e Selada)
-- **Versão Atual:** `v0.7.3-foundation-closed`
-- **Status da Fundação:** **`FOUNDATION = CLOSED`**
-- **Status da FASE 6:** **`FASE 6 = AUTHORIZED`** (Pronta para Início Imediato)
+- **Fase Atual:** FASE 6.1 — COMPLETE (Hybrid Legal Retrieval & RAG Foundation)
+- **Versão Atual:** `v0.8.0-retrieval-foundation`
+- **Status da Fase 6.1:** **`FASE 6.1 = COMPLETE`**
+- **Status da Fase 6.2:** **`FASE 6.2 = AUTHORIZED`** (Pronta para Início Imediato)
 
 ---
 
@@ -23,17 +23,12 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 4. [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md)
 5. [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
 6. [docs/HANDOFF.md](docs/HANDOFF.md)
-7. [docs/FINAL_FOUNDATION_LOCK_REPORT.md](docs/FINAL_FOUNDATION_LOCK_REPORT.md)
-8. [docs/FINAL_FOUNDATION_LOCK.md](docs/FINAL_FOUNDATION_LOCK.md)
-9. [docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md](docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md)
-10. [docs/FINAL_FOUNDATION_AUDIT.md](docs/FINAL_FOUNDATION_AUDIT.md)
-11. [docs/PHASE5_COMPLETION_GATE.md](docs/PHASE5_COMPLETION_GATE.md)
-12. [docs/PARSER_ARCHITECTURE.md](docs/PARSER_ARCHITECTURE.md)
-13. [docs/DOCUMENT_EXTRACTION.md](docs/DOCUMENT_EXTRACTION.md)
-14. [docs/OFFICIAL_SOURCES.md](docs/OFFICIAL_SOURCES.md)
-15. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
-16. Regras em [.agents/rules/](.agents/rules/)
-17. Código em `src/` e testes em `tests/`.
+7. [docs/PHASE6_1_COMPLETION.md](docs/PHASE6_1_COMPLETION.md)
+8. [docs/RETRIEVAL_ARCHITECTURE.md](docs/RETRIEVAL_ARCHITECTURE.md)
+9. [docs/FINAL_FOUNDATION_LOCK_REPORT.md](docs/FINAL_FOUNDATION_LOCK_REPORT.md)
+10. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
+11. Regras em [.agents/rules/](.agents/rules/)
+12. Código em `src/` e testes em `tests/`.
 
 ---
 
@@ -50,9 +45,9 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 
 # 4. Próxima Tarefa Prioritária
 
-**Próxima Fase:** FASE 6 — Legal RAG & Vector Indexing (**AUTORIZADA**)  
-**Versão Atual:** `v0.7.3-foundation-closed`  
+**Próxima Fase:** FASE 6.2 — Contextual Legal RAG & Guardrails de Resposta (**AUTORIZADA**)  
+**Versão Atual:** `v0.8.0-retrieval-foundation`  
 **Tarefa Imediata:** 
-1. Iniciar o desenvolvimento da FASE 6;
-2. Projetar a porta de embeddings e reranker híbrido respeitando a hierarquia jurídica (ADR-0005);
-3. Manter 100% da rastreabilidade temporal e proveniência canônica estabelecida na fundação selada.
+1. Iniciar o desenvolvimento da FASE 6.2;
+2. Projetar a porta `LegalLlmProvider` para síntese jurídica orientada a evidências;
+3. Implementar guardrails de resposta para que a LLM nunca invente normas ou fatos não contidos na evidência recuperada.
