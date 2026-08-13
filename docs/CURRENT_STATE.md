@@ -1,23 +1,25 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-13  
-**Fase Atual:** FASE 5 — CLOSED (Consistência Total de Contratos e Fundação Selada)  
-**Versão Atual:** `v0.7.2-foundation-lock`  
-**Status do Projeto:** PROMPT 07.2 — PASS. Consistência Total da Fundação Concluída: 1) Porta de Aquisição unificada `DocumentAcquisitionProvider.acquire(request: AcquisitionRequest) -> AcquisitionResult`; 2) Enum `ChangeStatus` alinhado (`NEW`, `UNCHANGED`, `CHANGED`, `REMOVED`, `UNAVAILABLE`); 3) DTOs `AcquisitionRequest` e `AcquisitionResult` integrados; 4) Unpacking correto da tupla `parse_structure` no `IngestDocumentUseCase`; 5) Suporte a `SUBSECAO` e `ANEXO` no `BrazilianLawParser` com `ParserWarning` estruturado; 6) Proteção SSRF e `SafeRedirectHandler` com `redirect_chain` e barreira contra downgrade HTTPS->HTTP; 7) Testes E2E (`test_end_to_end_acquisition_ingestion.py`) e concorrência (`test_concurrency_race_conditions.py`); 8) Relatório final em `docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md` (STATUS: PASS).
+**Fase Atual:** FASE 5 — CLOSED (Fundação Encerrada e Selada)  
+**Versão Atual:** `v0.7.3-foundation-closed`  
+**Status da Fundação:** **`FOUNDATION = CLOSED`**  
+**Status da Fase 6:** **`FASE 6 = AUTHORIZED`**  
+**Status do Projeto:** PROMPT 07.3 — PASS. Reparação Final e Selamento de Contratos de Produção Concluídos: 1) Porta `DocumentAcquisitionProvider` com contrato único `acquire(request) -> AcquisitionResult`; 2) Leitura streaming por chunks de 64KB com SHA-256 incremental e limite por `max_bytes`; 3) Proteção SSRF com resolução DNS real (A/AAAA) contra subredes privadas, loopback e metadata endpoints; 4) `SafeRedirectHandler` com max 5 redirects, `redirect_chain` capturada e bloqueio de HTTPS->HTTP downgrade; 5) Identidade lógica determinística de nós normativos (`logical_id`) independente de UUIDs; 6) Eliminação completa de `ChangeStatus.UPDATED` (substituído por `ChangeStatus.CHANGED`); 7) Relatório final em `docs/FINAL_FOUNDATION_LOCK_REPORT.md`.
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Hardening e Lock de Consistência (v0.7.2-foundation-lock):**
-  - Unificação da assinatura pública da porta `DocumentAcquisitionProvider` para utilizar a estrutura canônica `acquire(request: AcquisitionRequest) -> AcquisitionResult`.
-  - Alinhamento total do enum `ChangeStatus` eliminando usages legados de `UPDATED` em prol de `CHANGED`.
-  - Correção no `IngestDocumentUseCase` para desestruturar explicitamente a tupla `(nodes, parser_warnings)` retornada por `parse_structure()`, passando apenas a lista de `LegalNode` para gravação e agregando os warnings estruturados.
-  - Implementação de `SUBSECAO` e `ANEXO` no `BrazilianLawParser` e estruturação de `ParserWarning` (Zero Silent Data Loss).
-  - Atualização do `SafeRedirectHandler` no `HttpDocumentAcquisitionAdapter` para capturar `redirect_chain` e impedir estouros de limite ou downgrades de HTTPS para HTTP.
-  - Testes E2E (`test_end_to_end_acquisition_ingestion.py`) e teste de race condition concorrente (`test_concurrency_race_conditions.py`).
-- **Documentação & Relatório Final:**
-  - `docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md`, `docs/FINAL_FOUNDATION_AUDIT.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: PASS).
+- **Fechamento Definitivo da Fundação (v0.7.3-foundation-closed):**
+  - Assinatura unificada da porta de aquisição em `DocumentAcquisitionProvider.acquire(request: AcquisitionRequest) -> AcquisitionResult`.
+  - Leitura incremental em chunks de 64KB com hash SHA-256 streaming e abort por tamanho de artefato durante a leitura.
+  - Resolução DNS real para A e AAAA no `URLSecurityValidator` bloqueando IPs privados e loopback.
+  - Safe redirect handler com até 5 redirecionamentos e barreira contra downgrade de HTTPS para HTTP.
+  - Identidade lógica canônica (`LegalNode.logical_id`) e hash canônico determinístico.
+  - Suíte de contratos globais em `tests/unit/test_final_foundation_contract.py` e reprodutibilidade em `test_reproducibility_and_reingestion.py`.
+- **Documentação & Relatórios Finais:**
+  - `ADR-0014-final-foundation-production-contract.md`, `docs/FINAL_FOUNDATION_LOCK.md`, `docs/FINAL_FOUNDATION_LOCK_REPORT.md` (STATUS: CLOSED / AUTHORIZED).
 - **Status Cloud:** Neon = INTEGRADO VIA DATABASE_URL; Supabase = NÃO INTEGRADO; Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -64,7 +66,8 @@ lexora/
 │   │   ├── ADR-0010-temporal-legal-semantics.md
 │   │   ├── ADR-0011-dynamic-temporal-revocation-resolution.md
 │   │   ├── ADR-0012-legal-integrity-hardening.md
-│   │   └── ADR-0013-brazilian-legal-parsers-and-normative-acts.md
+│   │   ├── ADR-0013-brazilian-legal-parsers-and-normative-acts.md
+│   │   └── ADR-0014-final-foundation-production-contract.md
 │   ├── ACQUISITION.md
 │   ├── AGENT_PROTOCOL.md
 │   ├── ARCHITECTURE.md
@@ -76,6 +79,8 @@ lexora/
 │   ├── DOCUMENT_EXTRACTION.md
 │   ├── FINAL_FOUNDATION_AUDIT.md
 │   ├── FINAL_FOUNDATION_CONSISTENCY_REPORT.md
+│   ├── FINAL_FOUNDATION_LOCK.md
+│   ├── FINAL_FOUNDATION_LOCK_REPORT.md
 │   ├── HANDOFF.md
 │   ├── INGESTION.md
 │   ├── LEGAL_INTEGRITY.md
@@ -201,9 +206,11 @@ lexora/
 │       ├── test_brazilian_law_parser.py
 │       ├── test_domain.py
 │       ├── test_domain_canonical.py
+│       ├── test_final_foundation_contract.py
 │       ├── test_forensic_foundation_audit.py
 │       ├── test_ingestion_pipeline.py
 │       ├── test_ports.py
+│       ├── test_reproducibility_and_reingestion.py
 │       ├── test_revocation_behavior.py
 │       ├── test_security_governance_audit.py
 │       ├── test_source_governance.py
@@ -222,7 +229,7 @@ lexora/
 
 # 3. Próxima Tarefa Prioritária
 
-**FASE 6 — Legal RAG & Vector Indexing**
+**FASE 6 — Legal RAG & Vector Indexing (AUTORIZADA)**
 1. Implementar portas de indexação vetorial e reranking por hierarquia jurídica conforme ADR-0005;
 2. Integrar busca híbrida (Busca Vetorial + Busca Lexical Canônica) vinculada estritamente a referências normativas vigentes;
 3. Manter a barreira determinística do Legal Brain intacta (a LLM nunca altera o fato jurídico).

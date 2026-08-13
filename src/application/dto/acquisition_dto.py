@@ -1,9 +1,11 @@
+from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from src.domain.entities.acquisition_audit_log import AcquisitionAuditLog
 from src.domain.entities.raw_artifact import RawArtifact
 from src.domain.entities.source import Source
+from src.domain.enums import ChangeStatus
 
 
 class AcquisitionRequest(BaseModel):
@@ -16,8 +18,20 @@ class AcquisitionRequest(BaseModel):
 
 
 class AcquisitionResult(BaseModel):
-    """Resultado canônico contendo artefato, log de auditoria, bytes e histórico de redirecionamentos."""
+    """Resultado canônico contendo o contrato completo da operação de aquisição."""
+    source_id: str
+    requested_url: str
+    final_url: str
+    redirect_chain: List[str] = Field(default_factory=list, description="Histórico de URLs percorridas via HTTP redirect")
+    redirect_count: int = 0
+    http_status: int = 200
+    content_type: str
+    content_length: Optional[int] = None
+    content_hash: str
+    content_bytes: bytes
     artifact: RawArtifact
     audit_log: AcquisitionAuditLog
-    content_bytes: bytes
-    redirect_chain: List[str] = Field(default_factory=list, description="Histórico de URLs percorridas via HTTP redirect")
+    change_status: ChangeStatus
+    sanitized_error: Optional[str] = None
+    captured_at: datetime
+    timeout_seconds: float = 30.0

@@ -26,6 +26,15 @@ class LegalNode(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
+    @property
+    def logical_id(self) -> str:
+        """
+        Identidade Lógica Canônica Determinística do dispositivo normativo.
+        Independe de UUIDs aleatórios gerados no banco.
+        Formato: '{legal_version_id}:{path}'
+        """
+        return f"{self.legal_version_id}:{self.path}"
+
     def is_effective_on(self, target_date: date) -> bool:
         """Verifica se o nó normativo estava juridicamente vigente na data informada."""
         if self.status != NodeStatus.ACTIVE:

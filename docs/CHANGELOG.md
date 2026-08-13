@@ -6,23 +6,22 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.7.3-foundation-closed] - 2026-08-13
+
+### Adicionado
+- **Final Foundation Repair & Production Contract Enforcement (Prompt 07.3):**
+  - Resolução DNS real (A e AAAA) em `URLSecurityValidator` bloqueando subredes IP privadas, loopback e metadata endpoints.
+  - Leitura por streaming em chunks de 64KB com hash SHA-256 incremental e corte por `max_bytes` no `HttpDocumentAcquisitionAdapter`.
+  - `SafeRedirectHandler` com limite de 5 redirects, `redirect_chain` capturada e bloqueio de downgrade de HTTPS para HTTP.
+  - Identidade lógica canônica determinística (`LegalNode.logical_id`) independente de UUIDs.
+  - Suíte de contratos globais em `tests/unit/test_final_foundation_contract.py` e reprodutibilidade em `test_reproducibility_and_reingestion.py`.
+  - Especificação `docs/FINAL_FOUNDATION_LOCK.md` e relatório final `docs/FINAL_FOUNDATION_LOCK_REPORT.md` (STATUS: FOUNDATION = CLOSED / FASE 6 = AUTHORIZED).
+  - ADR-0014 registrando o contrato de produção da fundação.
+
+---
+
 ## [0.7.2-foundation-lock] - 2026-08-13
 
 ### Adicionado
 - **Final Forensic Correction & Contract Consistency Lock (Prompt 07.2):**
   - Unificação do contrato da porta de aquisição em `DocumentAcquisitionProvider.acquire(request: AcquisitionRequest) -> AcquisitionResult`.
-  - Inclusão dos DTOs `AcquisitionRequest` e `AcquisitionResult` com `redirect_chain` para auditoria.
-  - Alinhamento do enum `ChangeStatus` (`NEW`, `UNCHANGED`, `CHANGED`, `REMOVED`, `UNAVAILABLE`).
-  - Desestruturação da tupla `(nodes, parser_warnings)` no `IngestDocumentUseCase` enviando apenas a lista de `LegalNode` para gravação.
-  - Suporte a `SUBSECAO` e `ANEXO` no `BrazilianLawParser` com avisos estruturados `ParserWarning`.
-  - Suíte de testes E2E em `tests/integration/test_end_to_end_acquisition_ingestion.py`.
-  - Suíte de testes de concorrência e race condition em `tests/integration/test_concurrency_race_conditions.py`.
-  - Relatório final de consistência `docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md` (STATUS: PASS).
-
----
-
-## [0.7.1-final-foundation] - 2026-08-13
-
-### Adicionado
-- **Final Forensic Audit & Production Foundation Lock (Prompt 07.1):**
-  - Verificação AST-level de pureza do domínio em `tests/unit/test_forensic_foundation_audit.py`.

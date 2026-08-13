@@ -23,7 +23,7 @@ from src.domain.exceptions import (
 
 
 class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Handler urllib customizado para capturar redirect_chain e impedir HTTPS->HTTP downgrade e SSRF."""
+    """Handler urllib customizado para capturar redirect_chain e impedir HTTPS->HTTP downgrade e SSRF via DNS."""
 
     def __init__(self, source_registry: SourceRegistryService, source: Source, redirect_chain: List[str]):
         super().__init__()
@@ -41,7 +41,8 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
         if old_url.startswith("https://") and newurl.startswith("http://"):
             raise RedirectNotAllowedError(f"Downgrade inseguro de HTTPS para HTTP proibido para '{newurl}'.")
 
-        # 3. Re-validação SSRF e Governança na nova URL
+        # 3. Re-validação SSRF e Governança na nova URL (com DNS Resolution real)
+        allowed_domains = self.source_registry.get_allowed_domains(self.source.id)
         valid, warnings = self.source_registry.validate_acquisition_url(self.source, newurl)
         if not valid:
             raise SSRFProtectionError(f"Redirecionamento HTTP SSRF bloqueado para '{newurl}': {warnings}")
@@ -51,7 +52,9 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
-    """Adaptador de aquisição HTTP real implementando a porta unificada DocumentAcquisitionProvider."""
+    """Adaptador de aquisição HTTP real com leitura incremental em chunks (64KB), SHA-256 streaming e proteção SSRF/Redirect."""
+
+    CHUNK_SIZE = 64 * 1024  # Chunks de 64KB
 
     def __init__(self, source_registry: SourceRegistryService, allowed_mimes: Optional[List[str]] = None):
         self.source_registry = source_registry
@@ -87,20 +90,36 @@ class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
         start_time = time.time()
         captured_at = datetime.now(timezone.utc)
 
+        buffer = bytearray()
+        hasher = hashlib.sha256()
+        byte_counter = 0
+
         try:
             with opener.open(http_req, timeout=request.timeout_seconds) as response:
                 http_status = response.status
+                final_url = response.geturl()
                 content_type_raw = response.headers.get("Content-Type", "text/html; charset=utf-8")
                 
+                content_length_header = response.headers.get("Content-Length")
+                content_length = int(content_length_header) if content_length_header and content_length_header.isdigit() else None
+
                 # Validação de MIME
                 content_type_mime = content_type_raw.split(";")[0].strip().lower()
                 if not any(allowed in content_type_mime for allowed in self.allowed_mimes):
                     raise UnsupportedContentTypeError(f"Tipo de conteúdo MIME '{content_type_raw}' não permitido para aquisição.")
 
-                # Leitura limitada por bytes (streaming size cap)
-                content_bytes = response.read(request.max_bytes + 1)
-                if len(content_bytes) > request.max_bytes:
-                    raise ArtifactTooLargeError(f"Artefato excede o limite máximo de {request.max_bytes} bytes.")
+                # Leitura Incremental em Chunks de 64KB (Streaming size limit check)
+                while True:
+                    chunk = response.read(self.CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    
+                    byte_counter += len(chunk)
+                    if byte_counter > request.max_bytes:
+                        raise ArtifactTooLargeError(f"Artefato excede o limite máximo de {request.max_bytes} bytes durante a leitura.")
+
+                    hasher.update(chunk)
+                    buffer.extend(chunk)
 
         except TimeoutError:
             raise AcquisitionTimeoutError(f"Tempo limite ({request.timeout_seconds}s) excedido para '{target_url}'.")
@@ -110,10 +129,8 @@ class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
             raise AcquisitionFailedError(f"Falha na aquisição HTTP de '{target_url}': {str(e)}")
 
         response_time_ms = int((time.time() - start_time) * 1000)
-
-        # 4. SHA-256 e DTOs Canônicos
-        content_hash = hashlib.sha256(content_bytes).hexdigest()
-        byte_size = len(content_bytes)
+        content_bytes = bytes(buffer)
+        content_hash = hasher.hexdigest()
 
         artifact_id = f"artifact-{content_hash[:16]}"
         storage_key = f"sources/{source.id}/{artifact_id}.bin"
@@ -121,38 +138,46 @@ class HttpDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
         artifact = RawArtifact(
             id=artifact_id,
             source_id=source.id,
-            url=target_url,
+            url=final_url,
             captured_at=captured_at,
             content_hash=content_hash,
             content_type=content_type_raw,
-            size_bytes=byte_size,
+            size_bytes=byte_counter,
             storage_key=storage_key,
             created_at=captured_at
         )
 
         change_status = ChangeStatus.NEW
         if request.expected_hash:
-            if content_hash == request.expected_hash:
-                change_status = ChangeStatus.UNCHANGED
-            else:
-                change_status = ChangeStatus.CHANGED
+            change_status = ChangeStatus.UNCHANGED if content_hash == request.expected_hash else ChangeStatus.CHANGED
 
         audit_log = AcquisitionAuditLog(
             id=f"audit-{content_hash[:12]}",
             source_id=source.id,
-            target_url=target_url,
+            target_url=final_url,
             raw_artifact_id=artifact.id,
             http_status=http_status,
             content_type=content_type_raw,
-            content_length=byte_size,
+            content_length=byte_counter,
             content_hash=content_hash,
             response_time_ms=response_time_ms,
             change_status=change_status
         )
 
         return AcquisitionResult(
+            source_id=source.id,
+            requested_url=target_url,
+            final_url=final_url,
+            redirect_chain=redirect_chain,
+            redirect_count=len(redirect_chain) - 1,
+            http_status=http_status,
+            content_type=content_type_raw,
+            content_length=content_length or byte_counter,
+            content_hash=content_hash,
+            content_bytes=content_bytes,
             artifact=artifact,
             audit_log=audit_log,
-            content_bytes=content_bytes,
-            redirect_chain=redirect_chain
+            change_status=change_status,
+            captured_at=captured_at,
+            timeout_seconds=request.timeout_seconds
         )

@@ -6,10 +6,10 @@ Este documento orienta novos agentes de IA e desenvolvedores sobre como assumir 
 
 # 1. Status do Projeto
 
-- **Fase Atual:** FASE 5 — CLOSED (Consistência Total de Contratos e Fundação Selada)
-- **Versão Atual:** `v0.7.2-foundation-lock`
-- **Próxima Fase Autorizável:** FASE 6 — Legal RAG & Vector Indexing
-- **Status da FASE 6:** **`NÃO INICIADA`** (Aguardando Autorização da Fase 6)
+- **Fase Atual:** FASE 5 — CLOSED (Fundação Encerrada e Selada)
+- **Versão Atual:** `v0.7.3-foundation-closed`
+- **Status da Fundação:** **`FOUNDATION = CLOSED`**
+- **Status da FASE 6:** **`FASE 6 = AUTHORIZED`** (Pronta para Início Imediato)
 
 ---
 
@@ -23,18 +23,17 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 4. [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md)
 5. [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
 6. [docs/HANDOFF.md](docs/HANDOFF.md)
-7. [docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md](docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md)
-8. [docs/FINAL_FOUNDATION_AUDIT.md](docs/FINAL_FOUNDATION_AUDIT.md)
-9. [docs/PHASE5_COMPLETION_GATE.md](docs/PHASE5_COMPLETION_GATE.md)
-10. [docs/PHASE5_PILOT_DATASET.md](docs/PHASE5_PILOT_DATASET.md)
-11. [docs/PARSER_ARCHITECTURE.md](docs/PARSER_ARCHITECTURE.md)
-12. [docs/DOCUMENT_EXTRACTION.md](docs/DOCUMENT_EXTRACTION.md)
-13. [docs/OFFICIAL_SOURCES.md](docs/OFFICIAL_SOURCES.md)
-14. [docs/DATABASE_TRUTH_GATE.md](docs/DATABASE_TRUTH_GATE.md)
-15. [docs/LEGAL_INTEGRITY_HARDENING_REPORT.md](docs/LEGAL_INTEGRITY_HARDENING_REPORT.md)
-16. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
-17. Regras em [.agents/rules/](.agents/rules/)
-18. Código em `src/` e testes em `tests/`.
+7. [docs/FINAL_FOUNDATION_LOCK_REPORT.md](docs/FINAL_FOUNDATION_LOCK_REPORT.md)
+8. [docs/FINAL_FOUNDATION_LOCK.md](docs/FINAL_FOUNDATION_LOCK.md)
+9. [docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md](docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md)
+10. [docs/FINAL_FOUNDATION_AUDIT.md](docs/FINAL_FOUNDATION_AUDIT.md)
+11. [docs/PHASE5_COMPLETION_GATE.md](docs/PHASE5_COMPLETION_GATE.md)
+12. [docs/PARSER_ARCHITECTURE.md](docs/PARSER_ARCHITECTURE.md)
+13. [docs/DOCUMENT_EXTRACTION.md](docs/DOCUMENT_EXTRACTION.md)
+14. [docs/OFFICIAL_SOURCES.md](docs/OFFICIAL_SOURCES.md)
+15. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
+16. Regras em [.agents/rules/](.agents/rules/)
+17. Código em `src/` e testes em `tests/`.
 
 ---
 
@@ -51,9 +50,9 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 
 # 4. Próxima Tarefa Prioritária
 
-**Próxima Fase:** FASE 6 — Legal RAG & Vector Indexing  
-**Versão Atual:** `v0.7.2-foundation-lock` (Lock da Fundação)  
+**Próxima Fase:** FASE 6 — Legal RAG & Vector Indexing (**AUTORIZADA**)  
+**Versão Atual:** `v0.7.3-foundation-closed`  
 **Tarefa Imediata:** 
-1. Aguardar prompt oficial autorizando o início da FASE 6;
+1. Iniciar o desenvolvimento da FASE 6;
 2. Projetar a porta de embeddings e reranker híbrido respeitando a hierarquia jurídica (ADR-0005);
-3. Manter 100% da rastreabilidade temporal e proveniência canônica estabelecida nas Fases 1 a 5.
+3. Manter 100% da rastreabilidade temporal e proveniência canônica estabelecida na fundação selada.

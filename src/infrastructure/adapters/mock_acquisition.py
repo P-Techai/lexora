@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
 import hashlib
-from typing import Optional, Tuple
+from typing import Optional
 
 from src.application.dto.acquisition_dto import AcquisitionRequest, AcquisitionResult
 from src.application.ports.acquisition_provider import DocumentAcquisitionProvider
 from src.domain.entities.acquisition_audit_log import AcquisitionAuditLog
 from src.domain.entities.raw_artifact import RawArtifact
-from src.domain.entities.source import Source
 from src.domain.enums import ChangeStatus
 
 
@@ -55,8 +54,19 @@ class MockDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
         )
 
         return AcquisitionResult(
+            source_id=request.source.id,
+            requested_url=request.target_url,
+            final_url=request.target_url,
+            redirect_chain=[request.target_url],
+            redirect_count=0,
+            http_status=self.mock_status,
+            content_type="text/html; charset=utf-8",
+            content_length=byte_size,
+            content_hash=content_hash,
+            content_bytes=self.mock_content,
             artifact=artifact,
             audit_log=audit_log,
-            content_bytes=self.mock_content,
-            redirect_chain=[request.target_url]
+            change_status=change_status,
+            captured_at=captured_at,
+            timeout_seconds=request.timeout_seconds
         )
