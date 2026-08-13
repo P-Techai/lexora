@@ -6,22 +6,23 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.
 
 ---
 
+## [0.7.2-foundation-lock] - 2026-08-13
+
+### Adicionado
+- **Final Forensic Correction & Contract Consistency Lock (Prompt 07.2):**
+  - Unificação do contrato da porta de aquisição em `DocumentAcquisitionProvider.acquire(request: AcquisitionRequest) -> AcquisitionResult`.
+  - Inclusão dos DTOs `AcquisitionRequest` e `AcquisitionResult` com `redirect_chain` para auditoria.
+  - Alinhamento do enum `ChangeStatus` (`NEW`, `UNCHANGED`, `CHANGED`, `REMOVED`, `UNAVAILABLE`).
+  - Desestruturação da tupla `(nodes, parser_warnings)` no `IngestDocumentUseCase` enviando apenas a lista de `LegalNode` para gravação.
+  - Suporte a `SUBSECAO` e `ANEXO` no `BrazilianLawParser` com avisos estruturados `ParserWarning`.
+  - Suíte de testes E2E em `tests/integration/test_end_to_end_acquisition_ingestion.py`.
+  - Suíte de testes de concorrência e race condition em `tests/integration/test_concurrency_race_conditions.py`.
+  - Relatório final de consistência `docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md` (STATUS: PASS).
+
+---
+
 ## [0.7.1-final-foundation] - 2026-08-13
 
 ### Adicionado
 - **Final Forensic Audit & Production Foundation Lock (Prompt 07.1):**
-  - Verificação AST-level de pureza do domínio em `tests/unit/test_forensic_foundation_audit.py` (zero dependências de ORMs, clientes HTTP ou SDKs em `src/domain/`).
-  - Hash canônico determinístico para `LegalNode` em `DocumentHashCalculator.calculate_canonical_node_hash` (independente de UUIDs e IDs de banco).
-  - Proteção SSRF em redirects HTTP via `SafeRedirectHandler` em `HttpDocumentAcquisitionAdapter`.
-  - Auditoria estática de imutabilidade jurídica confirmando zero comandos SQL DELETE em entidades normativas.
-  - Relatório final de selamento da fundação `docs/FINAL_FOUNDATION_AUDIT.md` (STATUS: PASS).
-
----
-
-## [0.7.0-official-ingestion-pilot] - 2026-08-13
-
-### Adicionado
-- **Fase 5 — Ingestão Oficial de Legislação Brasileira Real:**
-  - Configuração do Neon PostgreSQL via driver `asyncpg` nas variáveis `DATABASE_URL` e `TEST_DATABASE_URL`.
-  - Adaptador `HttpDocumentAcquisitionAdapter` com SSRF e rate limiting.
-  - Parser estrutural `BrazilianLawParser` (`brazilian-law-parser@1.0.0`).
+  - Verificação AST-level de pureza do domínio em `tests/unit/test_forensic_foundation_audit.py`.

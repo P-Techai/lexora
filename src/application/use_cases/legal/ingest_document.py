@@ -105,7 +105,8 @@ class IngestDocumentUseCase:
         if dry_run:
             dummy_ver_id = "dry-run-ver-id"
             try:
-                nodes = self.structure_parser.parse_structure(normalized_content, dummy_ver_id)
+                nodes, parser_warnings = self.structure_parser.parse_structure(request.raw_content, dummy_ver_id)
+                warnings.extend([w.message if hasattr(w, "message") else str(w) for w in parser_warnings])
             except Exception as e:
                 errors.append(f"Erro no parser estrutural: {str(e)}")
                 return LegalDocumentIngestionResult(
@@ -118,7 +119,7 @@ class IngestDocumentUseCase:
                 status=IngestionStatus.CREATED,
                 content_hash=content_hash,
                 created=False,
-                warnings=["DRY RUN: Diagnóstico concluído com sucesso sem gravação em banco."]
+                warnings=["DRY RUN: Diagnóstico concluído com sucesso sem gravação em banco."] + warnings
             )
 
         # 5. Estágio: Persistência Transacional do Documento e Versão
@@ -149,10 +150,11 @@ class IngestDocumentUseCase:
             raw_storage_key=raw_key
         )
 
-        # 6. Estágio: Parsing e Estruturação de Nós Normativos
-        nodes = self.structure_parser.parse_structure(normalized_content, version.id)
+        # 6. Estágio: Parsing e Estruturação de Nós Normativos (RAW TEXT -> PARSER -> NODES LIST)
+        nodes, parser_warnings = self.structure_parser.parse_structure(request.raw_content, version.id)
+        warnings.extend([w.message if hasattr(w, "message") else str(w) for w in parser_warnings])
 
-        # 7. Estágio: Validação da Árvore e Persistência dos Nós
+        # 7. Estágio: Validação da Árvore e Persistência dos Nós (Recebe estritamente List[LegalNode])
         await self.add_nodes_uc.execute(version.id, nodes)
 
         status = IngestionStatus.CREATED if doc_created else IngestionStatus.UPDATED

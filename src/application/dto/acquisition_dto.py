@@ -1,37 +1,23 @@
-from datetime import datetime
-from typing import Dict, List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Optional
+from pydantic import BaseModel, Field
+
+from src.domain.entities.acquisition_audit_log import AcquisitionAuditLog
+from src.domain.entities.raw_artifact import RawArtifact
+from src.domain.entities.source import Source
 
 
 class AcquisitionRequest(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    source_id: str
-    url: str
-    max_size_bytes: int = Field(default=25_000_000, gt=0)  # 25 MB padrão
-    timeout_seconds: float = Field(default=30.0, gt=0.0)
-    allowed_content_types: List[str] = Field(
-        default_factory=lambda: [
-            "text/plain",
-            "text/html",
-            "application/pdf",
-            "text/xml",
-            "application/xml",
-            "application/json",
-        ]
-    )
+    """Solicitação de aquisição de artefato normativo de fonte oficial."""
+    source: Source
+    target_url: str
+    expected_hash: Optional[str] = None
+    timeout_seconds: float = Field(default=30.0, description="Tempo limite em segundos para a requisição HTTP")
+    max_bytes: int = Field(default=50 * 1024 * 1024, description="Tamanho máximo de download em bytes")
 
 
 class AcquisitionResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    source_id: str
-    url: str
-    status_code: int
-    content_type: str
-    size_bytes: int
-    raw_bytes: bytes
-    content_hash: str
-    captured_at: datetime
-    redirect_chain: List[str] = Field(default_factory=list)
-    headers: Dict[str, str] = Field(default_factory=dict)
+    """Resultado canônico contendo artefato, log de auditoria, bytes e histórico de redirecionamentos."""
+    artifact: RawArtifact
+    audit_log: AcquisitionAuditLog
+    content_bytes: bytes
+    redirect_chain: List[str] = Field(default_factory=list, description="Histórico de URLs percorridas via HTTP redirect")

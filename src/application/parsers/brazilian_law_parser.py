@@ -1,6 +1,7 @@
 import re
 from typing import List, Tuple, Optional
 import uuid
+from pydantic import BaseModel
 
 from src.application.ports.structure_parser import LegalStructureParser
 from src.domain.entities.legal_node import LegalNode
@@ -10,15 +11,24 @@ from src.domain.services.normalization_service import LegalNormalizationService
 from src.domain.services.path_builder import LegalPathBuilder
 
 
+class ParserWarning(BaseModel):
+    """Aviso estruturado gerado durante o parsing normativo (Zero Silent Data Loss)."""
+    code: str = "UNSTRUCTURED_LINE"
+    line_number: int
+    message: str
+    raw_text: str
+    severity: str = "WARNING"
+
+
 class BrazilianLawParser(LegalStructureParser):
     """
     PARSER ESTRUTURAL DETERMINÍSTICO DE LEGISLAÇÃO BRASILEIRA.
     Parser Versão: brazilian-law-parser@1.0.0.
-    - Reconhece: NORMA, LIVRO, TÍTULO, CAPÍTULO, SEÇÃO, SUBSEÇÃO, ARTIGO, PARÁGRAFO, INCISO, ALÍNEA, ITEM.
-    - Suporta: Art. 1º, Art. 1., § 1º, Parágrafo único., I -, a), 1.
+    - Reconhece: NORMA, LIVRO, TÍTULO, CAPÍTULO, SEÇÃO, SUBSEÇÃO, ARTIGO, PARÁGRAFO, INCISO, ALÍNEA, ITEM, ANEXO, NOTA.
+    - Suporta: Art. 1º, Art. 1., § 1º, Parágrafo único., I -, a), 1., Anexo I.
     - Preserva o RAW TEXT intacto e calcula NORMALIZED TEXT separadamente.
     - Define a raiz determinística NORMA (Sem depender de posição incidental de lista).
-    - Zero Silent Data Loss: Linhas não classificadas tornam-se nós NOTA.
+    - Zero Silent Data Loss: Linhas não classificadas tornam-se nós NOTA com ParserWarning estruturado.
     """
 
     def __init__(self, parser_version: str = "brazilian-law-parser@1.0.0"):
@@ -28,14 +38,20 @@ class BrazilianLawParser(LegalStructureParser):
         self,
         raw_text: str,
         version_id: str
-    ) -> Tuple[List[LegalNode], List[str]]:
+    ) -> Tuple[List[LegalNode], List[ParserWarning]]:
         nodes: List[LegalNode] = []
-        warnings: List[str] = []
+        warnings: List[ParserWarning] = []
 
         lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
 
         if not lines:
-            warnings.append("Texto de entrada vazio.")
+            warnings.append(ParserWarning(
+                code="EMPTY_INPUT",
+                line_number=0,
+                message="Texto de entrada para parsing está vazio.",
+                raw_text="",
+                severity="WARNING"
+            ))
             return nodes, warnings
 
         # 1. Criação da Raiz Determinística NORMA
@@ -58,7 +74,7 @@ class BrazilianLawParser(LegalStructureParser):
         )
         nodes.append(norma_node)
 
-        # Pilha de rastreamento de nós ancestrais: List[Tuple[depth_level, node_id, node_path]]
+        # Pilha de rastreamento de nós ancestrais
         stack: List[Tuple[int, str, str]] = [(0, norma_id, "/norma")]
         position_counter = 2
 
@@ -67,7 +83,9 @@ class BrazilianLawParser(LegalStructureParser):
         re_titulo = re.compile(r'^TÍTULO\s+([MCDXLVIICLDVIX]+)', re.IGNORECASE)
         re_capitulo = re.compile(r'^CAPÍTULO\s+([MCDXLVIICLDVIX]+)', re.IGNORECASE)
         re_secao = re.compile(r'^SEÇÃO\s+([MCDXLVIICLDVIX]+)', re.IGNORECASE)
-        re_artigo = re.compile(r'^Art\.\s*(\d+[ºo°]?|\d+)\.?', re.IGNORECASE)
+        re_subsecao = re.compile(r'^SUBSEÇÃO\s+([MCDXLVIICLDVIX]+)', re.IGNORECASE)
+        re_anexo = re.compile(r'^ANEXO\s*([MCDXLVIICLDVIX]+|\d+)?', re.IGNORECASE)
+        re_artigo = re.compile(r'^(Art(?:igo|\.)?\s*(\d+[ºo°]?|\d+)\.?)', re.IGNORECASE)
         re_paragrafo_unico = re.compile(r'^Parágrafo\s+único\.?', re.IGNORECASE)
         re_paragrafo_num = re.compile(r'^§\s*(\d+[ºo°]?|\d+)\.?', re.IGNORECASE)
         re_inciso = re.compile(r'^([MCDXLVIICLDVIX]+)\s*[-–—]', re.IGNORECASE)
@@ -84,6 +102,8 @@ class BrazilianLawParser(LegalStructureParser):
             m_tit = re_titulo.match(line)
             m_cap = re_capitulo.match(line)
             m_sec = re_secao.match(line)
+            m_sub = re_subsecao.match(line)
+            m_ane = re_anexo.match(line)
             m_art = re_artigo.match(line)
             m_pun = re_paragrafo_unico.match(line)
             m_pnum = re_paragrafo_num.match(line)
@@ -111,11 +131,22 @@ class BrazilianLawParser(LegalStructureParser):
                 identifier = f"secao-{m_sec.group(1).lower()}"
                 label = f"SEÇÃO {m_sec.group(1)}"
                 depth = 4
+            elif m_sub:
+                node_type = LegalNodeType.SUBSECAO
+                identifier = f"subsecao-{m_sub.group(1).lower()}"
+                label = f"SUBSEÇÃO {m_sub.group(1)}"
+                depth = 4
+            elif m_ane:
+                node_type = LegalNodeType.ANEXO
+                num_str = (m_ane.group(1) or "1").lower()
+                identifier = f"anexo-{num_str}"
+                label = f"ANEXO {m_ane.group(1) or 'I'}"
+                depth = 1
             elif m_art:
                 node_type = LegalNodeType.ARTIGO
-                num_str = re.sub(r'\D', '', m_art.group(1))
+                num_str = re.sub(r'\D', '', m_art.group(2))
                 identifier = f"art-{num_str}"
-                label = f"Art. {m_art.group(1)}"
+                label = f"Art. {m_art.group(2)}"
                 depth = 5
             elif m_pun:
                 node_type = LegalNodeType.PARAGRAFO
@@ -144,7 +175,13 @@ class BrazilianLawParser(LegalStructureParser):
                 label = f"Item {m_ite.group(1)}"
                 depth = 9
             else:
-                warnings.append(f"Linha {position_counter} mantida como nó NOTA (Zero Silent Data Loss): '{line[:40]}...'")
+                warnings.append(ParserWarning(
+                    code="UNSTRUCTURED_LINE",
+                    line_number=position_counter,
+                    message=f"Linha mantida como nó NOTA (Zero Silent Data Loss): '{line[:40]}...'",
+                    raw_text=line,
+                    severity="WARNING"
+                ))
 
             while stack and stack[-1][0] >= depth:
                 stack.pop()
@@ -153,7 +190,6 @@ class BrazilianLawParser(LegalStructureParser):
             node_path = LegalPathBuilder.build_path(parent_path, identifier)
             node_id = f"node-{uuid.uuid4().hex[:12]}"
             
-            # Hash canônico determinístico
             canonical_hash = DocumentHashCalculator.calculate_canonical_node_hash(
                 str(node_type), identifier, label, line
             )

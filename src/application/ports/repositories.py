@@ -7,6 +7,7 @@ from src.domain.entities.legal_document import LegalDocument
 from src.domain.entities.legal_node import LegalNode
 from src.domain.entities.legal_relation import LegalRelation
 from src.domain.entities.legal_version import LegalVersion
+from src.domain.entities.raw_artifact import RawArtifact
 from src.domain.entities.source import Source
 from src.domain.enums import DocumentType, Jurisdiction
 
@@ -24,6 +25,22 @@ class SourceRepository(ABC):
 
     @abstractmethod
     async def list_active(self) -> List[Source]:
+        pass
+
+
+class RawArtifactRepository(ABC):
+    """Porta de repositório para artefatos brutos RawArtifact."""
+
+    @abstractmethod
+    async def get_by_id(self, artifact_id: str) -> Optional[RawArtifact]:
+        pass
+
+    @abstractmethod
+    async def get_by_hash(self, content_hash: str) -> Optional[RawArtifact]:
+        pass
+
+    @abstractmethod
+    async def save(self, artifact: RawArtifact) -> RawArtifact:
         pass
 
 
@@ -80,6 +97,11 @@ class LegalNodeRepository(ABC):
     @abstractmethod
     async def get_tree_by_version(self, version_id: str) -> List[LegalNode]:
         """Recupera todos os nós pertencentes a uma versão ordenados hierarquicamente."""
+        pass
+
+    @abstractmethod
+    async def get_nodes_by_version(self, version_id: str) -> List[LegalNode]:
+        """Recupera todos os nós pertencentes a uma versão."""
         pass
 
     @abstractmethod

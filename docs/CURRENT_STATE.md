@@ -1,21 +1,23 @@
 # LÉXORA — Estado Atual do Projeto
 
 **Data da Última Atualização:** 2026-08-13  
-**Fase Atual:** FASE 5 — CLOSED (Fundação Totalmente Auditada e Selada)  
-**Versão Atual:** `v0.7.1-final-foundation`  
-**Status do Projeto:** PROMPT 07.1 — PASS. Auditoria Forense Completa Concluída: 1) Pureza do domínio AST-level verificada (`src/domain/` sem ORM/HTTP/SDKs); 2) Hash de nó canônico determinístico em `DocumentHashCalculator.calculate_canonical_node_hash`; 3) Proteção de redirect HTTP em `SafeRedirectHandler`; 4) Suíte forense em `test_forensic_foundation_audit.py`; 5) Relatório forense publicado em `docs/FINAL_FOUNDATION_AUDIT.md`.
+**Fase Atual:** FASE 5 — CLOSED (Consistência Total de Contratos e Fundação Selada)  
+**Versão Atual:** `v0.7.2-foundation-lock`  
+**Status do Projeto:** PROMPT 07.2 — PASS. Consistência Total da Fundação Concluída: 1) Porta de Aquisição unificada `DocumentAcquisitionProvider.acquire(request: AcquisitionRequest) -> AcquisitionResult`; 2) Enum `ChangeStatus` alinhado (`NEW`, `UNCHANGED`, `CHANGED`, `REMOVED`, `UNAVAILABLE`); 3) DTOs `AcquisitionRequest` e `AcquisitionResult` integrados; 4) Unpacking correto da tupla `parse_structure` no `IngestDocumentUseCase`; 5) Suporte a `SUBSECAO` e `ANEXO` no `BrazilianLawParser` com `ParserWarning` estruturado; 6) Proteção SSRF e `SafeRedirectHandler` com `redirect_chain` e barreira contra downgrade HTTPS->HTTP; 7) Testes E2E (`test_end_to_end_acquisition_ingestion.py`) e concorrência (`test_concurrency_race_conditions.py`); 8) Relatório final em `docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md` (STATUS: PASS).
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Selamento da Fundação (v0.7.1-final-foundation):**
-  - Verificação AST-level da pureza do domínio (`src/domain/`), confirmando zero dependências de ORMs, clientes HTTP ou SDKs externos.
-  - Refatoração do cálculo de hash de `LegalNode` para formato canônico determinístico (`DocumentHashCalculator.calculate_canonical_node_hash`), eliminando dependência de UUIDs.
-  - Re-validação de redirects HTTP contra regras de SSRF no `HttpDocumentAcquisitionAdapter`.
-  - Auditoria de segredos e higiene do repositório (`.env` no `.gitignore`).
+- **Hardening e Lock de Consistência (v0.7.2-foundation-lock):**
+  - Unificação da assinatura pública da porta `DocumentAcquisitionProvider` para utilizar a estrutura canônica `acquire(request: AcquisitionRequest) -> AcquisitionResult`.
+  - Alinhamento total do enum `ChangeStatus` eliminando usages legados de `UPDATED` em prol de `CHANGED`.
+  - Correção no `IngestDocumentUseCase` para desestruturar explicitamente a tupla `(nodes, parser_warnings)` retornada por `parse_structure()`, passando apenas a lista de `LegalNode` para gravação e agregando os warnings estruturados.
+  - Implementação de `SUBSECAO` e `ANEXO` no `BrazilianLawParser` e estruturação de `ParserWarning` (Zero Silent Data Loss).
+  - Atualização do `SafeRedirectHandler` no `HttpDocumentAcquisitionAdapter` para capturar `redirect_chain` e impedir estouros de limite ou downgrades de HTTPS para HTTP.
+  - Testes E2E (`test_end_to_end_acquisition_ingestion.py`) e teste de race condition concorrente (`test_concurrency_race_conditions.py`).
 - **Documentação & Relatório Final:**
-  - `docs/FINAL_FOUNDATION_AUDIT.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: PASS).
+  - `docs/FINAL_FOUNDATION_CONSISTENCY_REPORT.md`, `docs/FINAL_FOUNDATION_AUDIT.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: PASS).
 - **Status Cloud:** Neon = INTEGRADO VIA DATABASE_URL; Supabase = NÃO INTEGRADO; Cloudflare = NÃO INTEGRADO.
 
 ---
@@ -73,6 +75,7 @@ lexora/
 │   ├── DECISIONS.md
 │   ├── DOCUMENT_EXTRACTION.md
 │   ├── FINAL_FOUNDATION_AUDIT.md
+│   ├── FINAL_FOUNDATION_CONSISTENCY_REPORT.md
 │   ├── HANDOFF.md
 │   ├── INGESTION.md
 │   ├── LEGAL_INTEGRITY.md
@@ -181,7 +184,9 @@ lexora/
 │   ├── integration/
 │   │   ├── test_acquisition_pipeline.py
 │   │   ├── test_alembic.py
+│   │   ├── test_concurrency_race_conditions.py
 │   │   ├── test_database.py
+│   │   ├── test_end_to_end_acquisition_ingestion.py
 │   │   ├── test_evidence_referential_protection.py
 │   │   ├── test_golden_historical_scenario.py
 │   │   ├── test_golden_pilot_documents.py

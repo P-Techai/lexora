@@ -1,31 +1,43 @@
 import pytest
 
 from src.application.dto.acquisition_dto import AcquisitionRequest
-from src.domain.exceptions import ArtifactTooLargeError, UnsupportedContentTypeError
-from src.infrastructure.adapters.mock_acquisition import MockDocumentAcquisitionAdapter
+from src.application.services.source_registry import SourceRegistryService
+from src.domain.entities.source import Source
+from src.domain.exceptions import ArtifactTooLargeError, SSRFProtectionError
+from src.infrastructure.adapters.http_acquisition import HttpDocumentAcquisitionAdapter
 
 
 @pytest.mark.asyncio
-async def test_mock_acquisition_size_limit():
-    adapter = MockDocumentAcquisitionAdapter(synthetic_content=b"X" * 1000)
+async def test_acquisition_security_ssrf_blocking():
+    source = Source(id="src-planalto", name="Planalto", base_url="https://planalto.gov.br")
+    registry = SourceRegistryService()
+    registry.register_source(source, allowed_domains=["planalto.gov.br"])
+
+    adapter = HttpDocumentAcquisitionAdapter(source_registry=registry)
+
+    # Tenta acessar IP de metadata interno (SSRF)
     req = AcquisitionRequest(
-        source_id="src-test",
-        url="https://planalto.gov.br/lei",
-        max_size_bytes=500  # Limite menor que 1000 bytes
+        source=source,
+        target_url="http://169.254.169.254/latest/meta-data/"
     )
 
-    with pytest.raises(ArtifactTooLargeError):
+    with pytest.raises(SSRFProtectionError):
         await adapter.acquire(req)
 
 
 @pytest.mark.asyncio
-async def test_mock_acquisition_content_type_validation():
-    adapter = MockDocumentAcquisitionAdapter(synthetic_content=b"Content", content_type="video/mp4")
+async def test_acquisition_security_subdomain_bypass_blocking():
+    source = Source(id="src-planalto", name="Planalto", base_url="https://planalto.gov.br")
+    registry = SourceRegistryService()
+    registry.register_source(source, allowed_domains=["planalto.gov.br"])
+
+    adapter = HttpDocumentAcquisitionAdapter(source_registry=registry)
+
+    # Tenta ataque de bypass por sufixo de domínio (evilplanalto.gov.br ou planalto.gov.br.attacker.com)
     req = AcquisitionRequest(
-        source_id="src-test",
-        url="https://planalto.gov.br/lei",
-        allowed_content_types=["text/plain", "application/pdf"]
+        source=source,
+        target_url="https://planalto.gov.br.attacker.com/fake-lei"
     )
 
-    with pytest.raises(UnsupportedContentTypeError):
+    with pytest.raises(SSRFProtectionError):
         await adapter.acquire(req)

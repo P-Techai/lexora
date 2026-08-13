@@ -1,38 +1,62 @@
-from datetime import datetime
-from typing import Dict, Optional
+from datetime import datetime, timezone
+import hashlib
+from typing import Optional, Tuple
 
 from src.application.dto.acquisition_dto import AcquisitionRequest, AcquisitionResult
 from src.application.ports.acquisition_provider import DocumentAcquisitionProvider
-from src.domain.exceptions import ArtifactTooLargeError, UnsupportedContentTypeError
-from src.domain.services.hash_service import DocumentHashCalculator
+from src.domain.entities.acquisition_audit_log import AcquisitionAuditLog
+from src.domain.entities.raw_artifact import RawArtifact
+from src.domain.entities.source import Source
+from src.domain.enums import ChangeStatus
 
 
 class MockDocumentAcquisitionAdapter(DocumentAcquisitionProvider):
-    """Adaptador mock para simulação de captura de artefatos brutos em testes unitários e de integração."""
+    """Adaptador mock para aquisição determinística de artefatos brutos em ambiente de testes unitários."""
 
-    def __init__(self, synthetic_content: Optional[bytes] = None, content_type: str = "text/plain"):
-        self.synthetic_content = synthetic_content or b"Art. 1º Conteudo sintetico de teste do Lexora."
-        self.content_type = content_type
+    def __init__(self, mock_content: Optional[bytes] = None, mock_status: int = 200):
+        self.mock_content = mock_content or b"Conteudo sintetico de teste oficial LEXORA."
+        self.mock_status = mock_status
 
     async def acquire(self, request: AcquisitionRequest) -> AcquisitionResult:
-        size = len(self.synthetic_content)
-        if size > request.max_size_bytes:
-            raise ArtifactTooLargeError(f"Artefato possui {size} bytes, excedendo o limite de {request.max_size_bytes} bytes.")
+        captured_at = datetime.now(timezone.utc)
+        content_hash = hashlib.sha256(self.mock_content).hexdigest()
+        byte_size = len(self.mock_content)
 
-        if self.content_type not in request.allowed_content_types:
-            raise UnsupportedContentTypeError(f"MIME type '{self.content_type}' não é suportado pelo contrato.")
+        artifact_id = f"artifact-{content_hash[:16]}"
+        storage_key = f"sources/{request.source.id}/{artifact_id}.bin"
 
-        content_hash = DocumentHashCalculator.calculate_sha256(self.synthetic_content)
+        artifact = RawArtifact(
+            id=artifact_id,
+            source_id=request.source.id,
+            url=request.target_url,
+            captured_at=captured_at,
+            content_hash=content_hash,
+            content_type="text/html; charset=utf-8",
+            size_bytes=byte_size,
+            storage_key=storage_key,
+            created_at=captured_at
+        )
+
+        change_status = ChangeStatus.NEW
+        if request.expected_hash:
+            change_status = ChangeStatus.UNCHANGED if content_hash == request.expected_hash else ChangeStatus.CHANGED
+
+        audit_log = AcquisitionAuditLog(
+            id=f"audit-{content_hash[:12]}",
+            source_id=request.source.id,
+            target_url=request.target_url,
+            raw_artifact_id=artifact.id,
+            http_status=self.mock_status,
+            content_type="text/html; charset=utf-8",
+            content_length=byte_size,
+            content_hash=content_hash,
+            response_time_ms=10,
+            change_status=change_status
+        )
 
         return AcquisitionResult(
-            source_id=request.source_id,
-            url=request.url,
-            status_code=200,
-            content_type=self.content_type,
-            size_bytes=size,
-            raw_bytes=self.synthetic_content,
-            content_hash=content_hash,
-            captured_at=datetime.utcnow(),
-            redirect_chain=[request.url],
-            headers={"Server": "MockServer/1.0"}
+            artifact=artifact,
+            audit_log=audit_log,
+            content_bytes=self.mock_content,
+            redirect_chain=[request.target_url]
         )
