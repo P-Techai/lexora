@@ -1,23 +1,28 @@
 # LÉXORA — Estado Atual do Projeto
 
-**Data da Última Atualização:** 2026-08-12  
-**Fase Atual:** PROMPT 06.4 — Database Migration Truth Gate  
-**Versão Atual:** `v0.6.5-database-migration-truth`  
-**Status do Projeto:** FASE 06.4 — PASS. Todas as validações empíricas concluídas: 1) `TEST_DATABASE_URL` documentada em `.env.example`; 2) Teste de conexão `SELECT version()` em `test_postgres_connection.py`; 3) Schema audit via Alembic migrations `alembic upgrade head` e catálogo `information_schema.referential_constraints` em `test_postgres_schema_audit.py`; 4) Rejeição física de exclusões via `RESTRICT` em `test_postgres_evidence_referential_protection.py`; 5) Validação da cadeia de migrations `0001` a `0004` e round-trip em `test_alembic.py`; 6) Especificação técnica publicada em `docs/DATABASE_TRUTH_GATE.md`.
+**Data da Última Atualização:** 2026-08-13  
+**Fase Atual:** FASE 5 — Ingestão Oficial de Legislação Brasileira Real  
+**Versão Atual:** `v0.7.0-official-ingestion-pilot`  
+**Status do Projeto:** FASE 5 — CONCLUÍDA (STATUS: PASS). Todas as 27 metas da FASE 5 concluídas: 1) Auditoria pré-implementação em `docs/PHASE5_PREIMPLEMENTATION_AUDIT.md`; 2) Neon PostgreSQL integrado via `DATABASE_URL`; 3) Porta `DocumentExtractor` e adaptador `HtmlTxtDocumentExtractor` desacoplados; 4) Extensível `BrazilianLawParser` (`brazilian-law-parser@1.0.0`) suportando a hierarquia completa (`NORMA` a `ITEM`) e numeração real brasileira; 5) Nó raiz `NORMA` determinístico (sem dependência de `nodes[0]`); 6) Adaptador real `HttpDocumentAcquisitionAdapter` com SSRF e rate limiting; 7) Dataset piloto em `docs/PHASE5_PILOT_DATASET.md` com testes golden em `test_golden_pilot_documents.py`; 8) Migration Alembic `0005_phase5_normative_acts.py`; 9) ADR-0013 e `docs/PHASE5_COMPLETION_GATE.md` (STATUS: PASS).
 
 ---
 
 # 1. Resumo do Progresso Recente
 
-- **Eliminação de Fallbacks Silenciosos:**
-  - Testes PostgreSQL falham limpa e transparentemente caso `TEST_DATABASE_URL` esteja ausente ou aponte para motor não-PostgreSQL.
-- **Validação de Schema Via Alembic (`alembic upgrade head`):**
-  - Auditoria de catálogo em `test_postgres_schema_audit.py` aplica exclusivamente a suíte de migrations DDL do Alembic para construir o banco auditado (sem nunca utilizar `metadata.create_all()`).
-- **Inspeção Direta do Catálogo do Banco (`information_schema`):**
-  - Confirmação de que no `HEAD` (`0004`), `CASCADE = 0` e `SET NULL = 0` em todas as chaves estrangeiras normativas/proveniência do banco.
-- **Documentação & Especificação Técnica:**
-  - `docs/DATABASE_TRUTH_GATE.md`, `docs/LEGAL_INTEGRITY_HARDENING_REPORT.md` (STATUS: FASE 06.4 — PASS) e `ADR-0012`.
-- **Status Cloud:** Neon = NÃO INTEGRADO, Supabase = NÃO INTEGRADO, Cloudflare = NÃO INTEGRADO.
+- **Integração Neon PostgreSQL:**
+  - `DATABASE_URL` e `TEST_DATABASE_URL` configurados para o pooler do Neon via driver `asyncpg`.
+- **Arquitetura de Extração e Parsing de Legislação Real Brasileira:**
+  - Porta `DocumentExtractor` e adaptador `HtmlTxtDocumentExtractor` isolando decodificação de formatos (HTML/TXT) do parsing normativo.
+  - `BrazilianLawParser` reconhecendo a hierarquia jurídica brasileira completa (`NORMA`, `LIVRO`, `TÍTULO`, `CAPÍTULO`, `SEÇÃO`, `SUBSEÇÃO`, `ARTIGO`, `PARÁGRAFO`, `INCISO`, `ALÍNEA`, `ITEM`, `ANEXO`).
+  - Preservação estrita do RAW TEXT e cálculo separado do NORMALIZED TEXT. Linhas não estruturadas viram nós `NOTA` (Zero Silent Data Loss).
+  - Nó raiz `NORMA` determinístico eliminando qualquer uso informal de `nodes[0]`.
+- **Aquisição HTTP Real com SSRF e Polidez:**
+  - `HttpDocumentAcquisitionAdapter` com limite de bytes, rate limiting (max 2 req/s) e auditoria de aquisição.
+- **Dataset Piloto e Golden Tests:**
+  - Pilot dataset registrado em `docs/PHASE5_PILOT_DATASET.md` com testes em `test_golden_pilot_documents.py`.
+- **Documentação & ADR-0013:**
+  - `docs/OFFICIAL_SOURCES.md`, `docs/PARSER_ARCHITECTURE.md`, `docs/DOCUMENT_EXTRACTION.md`, `docs/PHASE5_PILOT_DATASET.md`, `docs/PHASE5_COMPLETION_GATE.md` e `ADR-0013`.
+- **Status Cloud:** Neon = INTEGRADO VIA DATABASE_URL; Supabase = NÃO INTEGRADO; Cloudflare = NÃO INTEGRADO.
 
 ---
 
@@ -47,7 +52,8 @@ lexora/
 │       ├── 0001_canonical_legal_model.py
 │       ├── 0002_acquisition_and_artifacts.py
 │       ├── 0003_legal_integrity_hardening.py
-│       └── 0004_evidence_fk_integrity.py
+│       ├── 0004_evidence_fk_integrity.py
+│       └── 0005_phase5_normative_acts.py
 ├── docs/
 │   ├── adr/
 │   │   ├── ADR-0001-clean-architecture.md
@@ -61,7 +67,8 @@ lexora/
 │   │   ├── ADR-0009-source-governance-and-acquisition-security.md
 │   │   ├── ADR-0010-temporal-legal-semantics.md
 │   │   ├── ADR-0011-dynamic-temporal-revocation-resolution.md
-│   │   └── ADR-0012-legal-integrity-hardening.md
+│   │   ├── ADR-0012-legal-integrity-hardening.md
+│   │   └── ADR-0013-brazilian-legal-parsers-and-normative-acts.md
 │   ├── ACQUISITION.md
 │   ├── AGENT_PROTOCOL.md
 │   ├── ARCHITECTURE.md
@@ -70,6 +77,7 @@ lexora/
 │   ├── DATABASE.md
 │   ├── DATABASE_TRUTH_GATE.md
 │   ├── DECISIONS.md
+│   ├── DOCUMENT_EXTRACTION.md
 │   ├── HANDOFF.md
 │   ├── INGESTION.md
 │   ├── LEGAL_INTEGRITY.md
@@ -77,6 +85,11 @@ lexora/
 │   ├── LEGAL_INTEGRITY_HARDENING_REPORT.md
 │   ├── LEGAL_MODEL.md
 │   ├── LEGAL_TRUTH_READINESS.md
+│   ├── OFFICIAL_SOURCES.md
+│   ├── PARSER_ARCHITECTURE.md
+│   ├── PHASE5_COMPLETION_GATE.md
+│   ├── PHASE5_PILOT_DATASET.md
+│   ├── PHASE5_PREIMPLEMENTATION_AUDIT.md
 │   ├── PROJECT.md
 │   ├── PROJECT_MEMORY.md
 │   ├── RAW_ARTIFACTS.md
@@ -97,9 +110,12 @@ lexora/
 │   │   │   ├── acquisition_dto.py
 │   │   │   ├── ingestion_dto.py
 │   │   │   └── temporal_dto.py
+│   │   ├── parsers/
+│   │   │   └── brazilian_law_parser.py
 │   │   ├── ports/
 │   │   │   ├── acquisition_provider.py
 │   │   │   ├── database_provider.py
+│   │   │   ├── document_extractor.py
 │   │   │   ├── llm_provider.py
 │   │   │   ├── repositories.py
 │   │   │   ├── retrieval_ports.py
@@ -144,6 +160,8 @@ lexora/
 │   │   └── exceptions.py
 │   ├── infrastructure/
 │   │   ├── adapters/
+│   │   │   ├── html_txt_extractor.py
+│   │   │   ├── http_acquisition.py
 │   │   │   ├── local_storage.py
 │   │   │   ├── mock_acquisition.py
 │   │   │   └── mock_llm.py
@@ -171,6 +189,7 @@ lexora/
 │   │   ├── test_database.py
 │   │   ├── test_evidence_referential_protection.py
 │   │   ├── test_golden_historical_scenario.py
+│   │   ├── test_golden_pilot_documents.py
 │   │   ├── test_postgres_connection.py
 │   │   ├── test_postgres_evidence_referential_protection.py
 │   │   ├── test_postgres_real.py
@@ -179,6 +198,7 @@ lexora/
 │   │   └── test_use_cases.py
 │   └── unit/
 │       ├── test_acquisition_security.py
+│       ├── test_brazilian_law_parser.py
 │       ├── test_domain.py
 │       ├── test_domain_canonical.py
 │       ├── test_ingestion_pipeline.py
@@ -188,6 +208,7 @@ lexora/
 │       ├── test_source_governance.py
 │       ├── test_temporal_integrity.py
 │       └── test_temporal_semantics.py
+├── .env
 ├── .env.example
 ├── .gitignore
 ├── alembic.ini
@@ -200,7 +221,7 @@ lexora/
 
 # 3. Próxima Tarefa Prioritária
 
-**FASE 5 — Ingestão Oficial & Parsers de Legislação Real**
-1. Implementar os conectores de leitura para os portais oficiais primários (Planalto, Receita Federal, CONFAZ);
-2. Desenvolver os parsers estruturais especializados para a Constituição Federal, Leis Complementares e Ordinárias;
-3. Realizar a primeira ingestão oficial controlada na base canônica do LÉXORA.
+**FASE 6 — Legal RAG & Vector Indexing**
+1. Implementar portas de indexação vetorial e reranking por hierarquia jurídica conforme ADR-0005;
+2. Integrar busca híbrida (Busca Vetorial + Busca Lexical Canônica) vinculada estritamente a referências normativas vigentes;
+3. Manter a barreira determinística do Legal Brain intacta (a LLM nunca altera o fato jurídico).

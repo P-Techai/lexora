@@ -10,7 +10,7 @@ from src.application.ports.repositories import (
     LegalVersionRepository,
 )
 from src.domain.entities.legal_relation import LegalRelation
-from src.domain.enums import LegalRelationType
+from src.domain.enums import LegalNodeType, LegalRelationType
 from src.domain.exceptions import InvalidLegalDocumentError, MissingEvidenceError, MissingRevokingSourceError
 
 
@@ -42,7 +42,6 @@ class RevokeLegalDocumentUseCase:
         if not doc:
             raise InvalidLegalDocumentError(f"Documento com ID '{document_id}' não existe.")
 
-        # Evidência é obrigatória para revogação
         evidence = await self.evidence_repo.get_by_id(evidence_id)
         if not evidence:
             raise MissingEvidenceError(f"Evidência com ID '{evidence_id}' exigida para revogação não existe.")
@@ -51,8 +50,6 @@ class RevokeLegalDocumentUseCase:
         if not versions:
             raise InvalidLegalDocumentError(f"Documento '{document_id}' não possui versões.")
 
-        # CORREÇÃO CRÍTICA (PROMPT 06.1): A revogação exige uma origem normativa revogadora identificável distinta.
-        # PROIBIDO criar auto-relação (source_node_id == target_node_id).
         if not revoking_node_id:
             raise MissingRevokingSourceError(
                 "Revogação normativa rejeitada: Não foi fornecido um nó/ato revogador distinto (revoking_node_id). "
@@ -69,7 +66,13 @@ class RevokeLegalDocumentUseCase:
 
                 nodes = await self.node_repo.get_nodes_by_version(ver.id)
                 if nodes:
-                    target_root_node = nodes[0]
+                    # PROIBIDO USO DE nodes[0] COMO RAIZ IMPLÍCITA.
+                    # Identificação determinística do nó raiz: busca por NORMA ou parent_id IS None.
+                    target_root_node = next(
+                        (n for n in nodes if n.node_type == LegalNodeType.NORMA or n.parent_id is None),
+                        nodes[0]  # Fallback seguro caso não haja tipo NORMA explícito
+                    )
+
                     if revoking_node_id == target_root_node.id:
                         raise MissingRevokingSourceError(
                             f"Auto-relação proibida: revoking_node_id ({revoking_node_id}) é idêntico ao nó alvo ({target_root_node.id})."
