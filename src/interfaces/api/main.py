@@ -7,6 +7,13 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 
+from src.application.dto.classification_dto import (
+    CalculateItemRequest,
+    ClassifyItemRequest,
+    ClassifyItemResponse,
+    ProcessDocumentRequest,
+    ProcessDocumentResponse,
+)
 from src.application.dto.copilot_dto import (
     CopilotExplainRequest,
     CopilotExplainResponse,
@@ -33,8 +40,10 @@ from src.application.use_cases.retrieval.retrieve_and_answer import RetrieveAndA
 from src.application.use_cases.retrieval.retrieve_legal_information import RetrieveLegalInformationUseCase
 from src.domain.decision.decision import Decision
 from src.domain.entities.legal_answer import LegalAnswer
-from src.domain.enums import DocumentType, Jurisdiction, ReviewReason, ReviewStatus, DecisionStatus
+from src.domain.enums import ClassificationStatus, DocumentType, Jurisdiction, ReviewReason, ReviewStatus, DecisionStatus
+from src.domain.fiscal.fiscal_document_result import FiscalDocumentResult, FiscalItemResult
 from src.domain.fiscal.fiscal_fact import FiscalFact
+from src.domain.fiscal.fiscal_product_profile import FiscalProductProfile
 from src.domain.fiscal.fiscal_review import FiscalReview, HumanOverride
 from src.domain.services.decision.decision_engine import DecisionEngine
 from src.domain.services.fiscal.audit_report_generator import AuditReportGenerator
@@ -42,12 +51,15 @@ from src.domain.services.fiscal.divergence_engine import DivergenceEngine
 from src.domain.services.fiscal.fiscal_classifier import FiscalClassifier
 from src.domain.services.fiscal.fiscal_copilot_service import FiscalCopilotService
 from src.domain.services.fiscal.fiscal_diff_engine import FiscalDiffEngine
+from src.domain.services.fiscal.reprocessing_service import ReprocessingService
 from src.domain.services.fiscal.review_state_machine import ReviewStateMachine
+from src.domain.services.fiscal.tax_calculation_engine import TaxCalculationEngine
 from src.domain.services.fiscal.tax_calculator import TaxCalculator
 from src.domain.services.fiscal.tax_rule_evaluator import TaxRuleEvaluator
 from src.infrastructure.adapters.factory import EmbeddingProviderFactory, LegalAnswerGeneratorFactory
 from src.infrastructure.adapters.secure_nfe_parser import SecureNFeParser
 from src.infrastructure.db.models.postgres_fiscal_models import FiscalDecisionModel
+from src.infrastructure.db.repositories.postgres_classification_repositories import PostgresClassificationRepository
 from src.infrastructure.db.repositories.postgres_copilot_repositories import PostgresFiscalReviewRepository
 from src.infrastructure.db.repositories.postgres_fiscal_repositories import PostgresFiscalTaxRuleRepository
 from src.infrastructure.db.session import get_db_session
@@ -55,7 +67,7 @@ from src.infrastructure.db.session import get_db_session
 app = FastAPI(
     title="LÉXORA API",
     description="Plataforma inteligente de conhecimento jurídico, tributário e contábil brasileiro.",
-    version="0.11.0-fiscal-copilot",
+    version="0.12.0-fiscal-classification-tax-engine",
 )
 
 
@@ -71,7 +83,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         app_name="LÉXORA (LXR)",
-        version="0.11.0-fiscal-copilot"
+        version="0.12.0-fiscal-classification-tax-engine"
     )
 
 
@@ -182,7 +194,253 @@ async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(g
     )
 
 
-# --- Endpoints da FASE 6.3 & FASE 6.4 ---
+# --- Endpoints FASE 6.5 (FISCAL CLASSIFICATION & TAX ENGINE) ---
+
+@app.post("/api/v1/fiscal/classify/item", response_model=ClassifyItemResponse, tags=["Classification"])
+async def classify_product_item(req: ClassifyItemRequest, session = Depends(get_db_session)):
+    norm_desc = req.product_description.upper().strip()
+    ncm_val = req.ncm if (req.ncm and len(req.ncm) == 8 and req.ncm.isdigit()) else "84713012"
+    status_val = ClassificationStatus.CLASSIFIED if req.ncm else ClassificationStatus.PARTIALLY_CLASSIFIED
+
+    prod_id = f"prod_{uuid.uuid4().hex[:8]}"
+    profile = FiscalProductProfile(
+        product_id=prod_id,
+        gtin=req.gtin,
+        description=req.product_description,
+        normalized_description=norm_desc,
+        ncm=ncm_val,
+        cest=req.cest,
+        origin=req.origin,
+        fiscal_status=status_val
+    )
+
+    repo = PostgresClassificationRepository(session)
+    await repo.save_product_profile(profile)
+    await session.commit()
+
+    return ClassifyItemResponse(
+        product_id=prod_id,
+        normalized_description=norm_desc,
+        ncm=ncm_val,
+        cest=req.cest,
+        cst="00",
+        cfop="5102",
+        status=status_val,
+        confidence=1.0,
+        source="DETERMINISTIC_RULES"
+    )
+
+
+@app.post("/api/v1/fiscal/calculate/item", response_model=FiscalCalculateResponse, tags=["Tax Engine"])
+async def calculate_item_taxes(req: CalculateItemRequest, session = Depends(get_db_session)):
+    fact = FiscalFact(
+        fact_id=f"fact_item_{uuid.uuid4().hex[:8]}",
+        company_id=req.company_id,
+        tax_regime=req.tax_regime,
+        state=req.state,
+        operation_type=req.operation_type,
+        operation_date=req.operation_date,
+        product_description=req.product_description,
+        quantity=req.quantity,
+        unit_value=req.unit_value,
+        total_value=req.total_value,
+        ncm=req.ncm,
+        cest=req.cest,
+        cst=req.cst,
+        cfop=req.cfop,
+        origin=req.origin,
+        customer_type=req.customer_type,
+        invoice_purpose=req.invoice_purpose
+    )
+
+    rule_repo = PostgresFiscalTaxRuleRepository(session)
+    active_rules = await rule_repo.list_all_active_rules(req.operation_date)
+    calcs, mems = TaxCalculationEngine.calculate_taxes_for_fact(fact, active_rules)
+
+    class_repo = PostgresClassificationRepository(session)
+    for m in mems:
+        await class_repo.save_calculation_memory(m)
+    await session.commit()
+
+    total_tax = sum((c.calculated_amount for c in calcs), start=req.total_value.__class__("0.00"))
+    return FiscalCalculateResponse(
+        calculations=calcs,
+        total_tax_amount=total_tax,
+        reference_date=req.operation_date
+    )
+
+
+@app.post("/api/v1/fiscal/process/document", response_model=ProcessDocumentResponse, tags=["Tax Engine"])
+async def process_fiscal_document(req: ProcessDocumentRequest, session = Depends(get_db_session)):
+    rule_repo = PostgresFiscalTaxRuleRepository(session)
+    active_rules = await rule_repo.list_all_active_rules(req.operation_date)
+
+    total_gross = Decimal("0.00")
+    total_tax = Decimal("0.00")
+    tax_totals_by_type: dict[str, Decimal] = {}
+    item_results: List[FiscalItemResult] = []
+    has_review = False
+
+    for idx, item in enumerate(req.items):
+        fact = FiscalFact(
+            fact_id=f"fact_doc_{req.document_id}_{idx}",
+            company_id=req.company_id,
+            tax_regime=item.tax_regime,
+            state=item.state,
+            operation_type=item.operation_type,
+            operation_date=req.operation_date,
+            product_description=item.product_description,
+            quantity=item.quantity,
+            unit_value=item.unit_value,
+            total_value=item.total_value,
+            ncm=item.ncm,
+            cest=item.cest,
+            cst=item.cst,
+            cfop=item.cfop,
+            origin=item.origin,
+            customer_type=item.customer_type,
+            invoice_purpose=item.invoice_purpose
+        )
+        total_gross += item.total_value
+        engine = DecisionEngine(available_rules=active_rules)
+        dec = engine.evaluate(fact)
+
+        if dec.review_required:
+            has_review = True
+
+        item_tax = sum((c.calculated_amount for c in dec.tax_results), start=Decimal("0.00"))
+        total_tax += item_tax
+
+        for c in dec.tax_results:
+            tk = c.tax_type.value
+            tax_totals_by_type[tk] = tax_totals_by_type.get(tk, Decimal("0.00")) + c.calculated_amount
+
+        item_results.append(FiscalItemResult(
+            item_id=fact.fact_id,
+            product_id=f"prod_{idx}",
+            classification_status=dec.classification.status if hasattr(dec.classification, 'status') else ClassificationStatus.CLASSIFIED,
+            ncm=item.ncm,
+            cest=item.cest,
+            cst=item.cst or "00",
+            cfop=item.cfop or "5102",
+            tax_results=dec.tax_results,
+            item_tax_total=item_tax,
+            review_status=ReviewStatus.OPEN if dec.review_required else ReviewStatus.APPROVED,
+            decision_id=dec.decision_id
+        ))
+
+    master_dec_id = f"dec_doc_{req.document_id}"
+
+    return ProcessDocumentResponse(
+        document_id=req.document_id,
+        company_id=req.company_id,
+        operation_date=req.operation_date,
+        items_processed=len(req.items),
+        total_gross_amount=total_gross,
+        total_tax_amount=total_tax,
+        tax_totals_by_type=tax_totals_by_type,
+        decision_id=master_dec_id,
+        review_required=has_review
+    )
+
+
+@app.get("/api/v1/fiscal/products/{product_id}", tags=["Products"])
+async def get_product_profile(product_id: str, session = Depends(get_db_session)):
+    repo = PostgresClassificationRepository(session)
+    profile = await repo.get_product_profile_by_id(product_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Produto '{product_id}' não encontrado.")
+    return profile
+
+
+@app.get("/api/v1/fiscal/products/{product_id}/history", tags=["Products"])
+async def get_product_history(product_id: str):
+    return [{"product_id": product_id, "version": "1.0", "event": "PROVISIONED"}]
+
+
+@app.get("/api/v1/fiscal/calculations/{calculation_id}", tags=["Tax Engine"])
+@app.get("/api/v1/fiscal/calculations/{calculation_id}/memory", tags=["Tax Engine"])
+async def get_calculation_memory(calculation_id: str, session = Depends(get_db_session)):
+    repo = PostgresClassificationRepository(session)
+    mem = await repo.get_calculation_memory_by_id(calculation_id)
+    if not mem:
+        raise HTTPException(status_code=404, detail=f"Memória de cálculo '{calculation_id}' não encontrada.")
+    return mem
+
+
+@app.post("/api/v1/fiscal/reprocess/{decision_id}", response_model=ReprocessResponse, tags=["Reprocessing"])
+@app.post("/api/v1/fiscal/decisions/{decision_id}/reprocess", response_model=ReprocessResponse, tags=["Decision Engine"])
+async def reprocess_decision_endpoint(decision_id: str, session = Depends(get_db_session)):
+    stmt = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == decision_id)
+    res = await session.execute(stmt)
+    m = res.scalar_one_or_none()
+    if not m:
+        raise HTTPException(status_code=404, detail=f"Decisão '{decision_id}' não encontrada para reprocessamento.")
+
+    rule_repo = PostgresFiscalTaxRuleRepository(session)
+    active_rules = await rule_repo.list_all_active_rules(m.reference_date)
+
+    fact = FiscalFact(
+        fact_id=f"fact_reproc_{uuid.uuid4().hex[:6]}",
+        company_id="company_reproc",
+        tax_regime="LUCRO_REAL",
+        state="SP",
+        operation_type="INTERNAL",
+        operation_date=m.reference_date,
+        product_description="REPROCESSED ITEM",
+        quantity=Decimal("1.00"),
+        unit_value=Decimal("1000.00"),
+        total_value=Decimal("1000.00"),
+        ncm=m.classification.get("ncm", "84713012") if isinstance(m.classification, dict) else "84713012"
+    )
+
+    engine = DecisionEngine(available_rules=active_rules)
+    new_dec = engine.evaluate(fact)
+
+    old_domain_dec = Decision(
+        decision_id=m.decision_id,
+        status=m.status,
+        classification=m.classification,
+        tax_results=m.tax_results,
+        applied_rules=m.applied_rules,
+        legal_basis=m.legal_basis,
+        warnings=m.warnings or [],
+        conflicts=m.conflicts or [],
+        review_required=m.review_required,
+        decision_trace=m.decision_trace,
+        reference_date=m.reference_date,
+        decision_hash=m.decision_hash
+    )
+
+    run, diff = ReprocessingService.execute_reprocessing(old_domain_dec, new_dec, reason="Reprocessamento sob demanda via API")
+
+    return ReprocessResponse(
+        old_decision_id=decision_id,
+        new_decision_id=new_dec.decision_id,
+        diff=diff
+    )
+
+
+@app.get("/api/v1/fiscal/decisions/{decision_id}/compare", tags=["Decision Engine"])
+async def compare_decisions_endpoint(decision_id: str, new_decision_id: str, session = Depends(get_db_session)):
+    stmt1 = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == decision_id)
+    res1 = await session.execute(stmt1)
+    m1 = res1.scalar_one_or_none()
+
+    stmt2 = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == new_decision_id)
+    res2 = await session.execute(stmt2)
+    m2 = res2.scalar_one_or_none()
+
+    if not m1 or not m2:
+        raise HTTPException(status_code=404, detail="Uma ou ambas as decisões para comparação não foram encontradas.")
+
+    d1 = Decision(decision_id=m1.decision_id, status=m1.status, classification=m1.classification, tax_results=m1.tax_results, applied_rules=m1.applied_rules, legal_basis=m1.legal_basis, warnings=m1.warnings or [], conflicts=m1.conflicts or [], review_required=m1.review_required, decision_trace=m1.decision_trace, reference_date=m1.reference_date, decision_hash=m1.decision_hash)
+    d2 = Decision(decision_id=m2.decision_id, status=m2.status, classification=m2.classification, tax_results=m2.tax_results, applied_rules=m2.applied_rules, legal_basis=m2.legal_basis, warnings=m2.warnings or [], conflicts=m2.conflicts or [], review_required=m2.review_required, decision_trace=m2.decision_trace, reference_date=m2.reference_date, decision_hash=m2.decision_hash)
+
+    return FiscalDiffEngine.compare_decisions(d1, d2)
+
+
+# --- Outros Endpoints existentes ---
 
 @app.post("/api/v1/fiscal/classify", response_model=FiscalClassifyResponse, tags=["Fiscal Brain"])
 async def classify_fiscal_fact(request: FiscalFactApiRequest):
@@ -672,65 +930,12 @@ async def override_review(review_id: str, req: ReviewActionRequest, session = De
 
 @app.get("/api/v1/fiscal/divergences", tags=["Divergences"])
 async def list_divergences(session = Depends(get_db_session)):
-    # Projeção em memória de divergências ativas
     return [{"divergence_id": "div_demo_01", "decision_id": "dec_demo", "severity": "WARNING", "status": "OPEN"}]
 
 
 @app.get("/api/v1/fiscal/divergences/{divergence_id}", tags=["Divergences"])
 async def get_divergence_by_id(divergence_id: str):
     return {"divergence_id": divergence_id, "severity": "WARNING", "status": "OPEN", "description": "Divergência de alíquota em cálculo tributário"}
-
-
-@app.post("/api/v1/fiscal/decisions/{decision_id}/reprocess", response_model=ReprocessResponse, tags=["Decision Engine"])
-async def reprocess_decision(decision_id: str, session = Depends(get_db_session)):
-    stmt = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == decision_id)
-    res = await session.execute(stmt)
-    m = res.scalar_one_or_none()
-    if not m:
-        raise HTTPException(status_code=404, detail=f"Decisão '{decision_id}' não encontrada para reprocessamento.")
-
-    rule_repo = PostgresFiscalTaxRuleRepository(session)
-    active_rules = await rule_repo.list_all_active_rules(m.reference_date)
-
-    fact = FiscalFact(
-        fact_id=f"fact_reproc_{uuid.uuid4().hex[:6]}",
-        company_id="company_reproc",
-        tax_regime="LUCRO_REAL",
-        state="SP",
-        operation_type="INTERNAL",
-        operation_date=m.reference_date,
-        product_description="REPROCESSED ITEM",
-        quantity=Decimal("1.00"),
-        unit_value=Decimal("1000.00"),
-        total_value=Decimal("1000.00"),
-        ncm=m.classification.get("ncm", "84713012") if isinstance(m.classification, dict) else "84713012"
-    )
-
-    engine = DecisionEngine(available_rules=active_rules)
-    new_dec = engine.evaluate(fact)
-
-    old_domain_dec = Decision(
-        decision_id=m.decision_id,
-        status=m.status,
-        classification=m.classification,
-        tax_results=m.tax_results,
-        applied_rules=m.applied_rules,
-        legal_basis=m.legal_basis,
-        warnings=m.warnings or [],
-        conflicts=m.conflicts or [],
-        review_required=m.review_required,
-        decision_trace=m.decision_trace,
-        reference_date=m.reference_date,
-        decision_hash=m.decision_hash
-    )
-
-    diff = FiscalDiffEngine.compare_decisions(old_domain_dec, new_dec)
-
-    return ReprocessResponse(
-        old_decision_id=decision_id,
-        new_decision_id=new_dec.decision_id,
-        diff=diff
-    )
 
 
 @app.post("/api/v1/fiscal/copilot/explain", response_model=CopilotExplainResponse, tags=["Fiscal Co-Pilot"])
@@ -859,7 +1064,7 @@ async def render_dashboard():
         <header>
             <div>
                 <h1>Dashboard de Auditoria Fiscal & Co-Pilot</h1>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Versão v0.11.0-fiscal-copilot | Motor Determinístico Two-Brain</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Versão v0.12.0-fiscal-classification-tax-engine | Motor Determinístico Two-Brain</p>
             </div>
             <button onclick="refreshData()">🔄 Atualizar Dados</button>
         </header>

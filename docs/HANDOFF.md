@@ -1,27 +1,25 @@
-# LÉXORA — RELATÓRIO DE HANDOFF DA FASE 6.4
+# LÉXORA — RELATÓRIO DE HANDOFF DA FASE 6.5
 
 **Data:** 2026-08-14  
-**Versão Atual:** `v0.11.0-fiscal-copilot`  
-**Migration HEAD:** `0009_fiscal_copilot_audit`  
+**Versão Atual:** `v0.12.0-fiscal-classification-tax-engine`  
+**Migration HEAD:** `0010_fiscal_classification_tax_engine`  
 
 ---
 
 ## 1. Resumo Executivo
-A **FASE 6.4 — FISCAL CO-PILOT & AUDIT DASHBOARD** foi implementada e concluída com sucesso.
+A **FASE 6.5 — PRODUCT FISCAL CLASSIFICATION & TAX CALCULATION ENGINE** foi implementada e concluída com sucesso.
 
 ### Destaques da Entrega:
-- **Audit Dashboard Web UI (`/dashboard`):** Servido diretamente via FastAPI HTMLResponse com visualização de métricas em tempo real, lista de decisões, busca e painel do Co-Pilot.
-- **Fiscal Co-Pilot (`LLM = EXPLANATION ONLY`):** Explica decisões determinísticas sem alterar resultados tributários.
-- **Máquina de Estados de Revisão Humana (`ReviewStateMachine`):** Transições estritas (`OPEN` -> `IN_REVIEW` -> `APPROVED` / `REJECTED` / `ESCALATED`) com eventos imutáveis com hash SHA-256 (`ReviewEvent`).
-- **Human Overrides Imutáveis:** Preservação integral das decisões originais.
-- **Reprocessamento & Fiscal Diff:** Endpoint `/reprocess` gerando comparativos de diferenças.
-- **Migration Alembic `0009_fiscal_copilot_audit`:** Tabelas relacionais com `ON DELETE RESTRICT`.
-- **Suíte de Testes:** 30 testes unitários, 4 cenários Golden de revisão e integração PostgreSQL 100% validados.
+- **Perfis Fiscais de Produtos (`FiscalProductProfile`):** Suporte cadastral a GTIN, SKU, NCM, CEST, unidade e origem com classificação determinística.
+- **Memórias de Cálculo Auditáveis (`CalculationMemory`):** Reconstrução explícita das fórmulas e inputs para ICMS, ICMS-ST, IPI, PIS, COFINS, ISS, FCP, FCP-ST em precisão `Decimal` (`ROUND_HALF_UP`).
+- **Autoridade Temporal:** Regras resolvidas contra `operation_date` (`effective_from <= operation_date < effective_until`).
+- **Reprocessamento Não-Destrutivo (`ReprocessingService`):** Execuções salvas com preservação integral das decisões históricas originais.
+- **Migration Alembic `0010_fiscal_classification_tax_engine`:** Tabelas relacionais protegidas por `ON DELETE RESTRICT`.
+- **Suíte de Testes:** 26 testes unitários, Golden Scenarios 1, 2, 3 e testes PostgreSQL 100% aprovados.
 
 ---
 
 ## 2. Comandos Principais
 - Iniciar API e Dashboard Web UI: `uvicorn src.interfaces.api.main:app --reload`
-- Acessar Dashboard: `http://localhost:8000/dashboard`
 - Executar Alembic Migrations: `alembic upgrade head`
-- Executar Testes: `pytest`
+- Executar Suíte Completa de Testes: `pytest`
