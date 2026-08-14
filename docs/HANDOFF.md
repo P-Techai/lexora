@@ -6,10 +6,10 @@ Este documento orienta novos agentes de IA e desenvolvedores sobre como assumir 
 
 # 1. Status do Projeto
 
-- **Fase Atual:** FASE 6.2 — SEALED (Selamento de Produção do RAG Jurídico Contextual)
-- **Versão Atual:** `v0.9.1-contextual-rag-production-lock`
-- **Status da Fase 6.2:** **`FASE 6.2 = SEALED`**
-- **Status da Fase 6.3:** **`FASE 6.3 = AUTHORIZED`** (Pronta para Início Imediato)
+- **Fase Atual:** FASE 6.3 — COMPLETE (Fiscal Brain & Decision Engine — Two-Brain Governance)
+- **Versão Atual:** `v0.10.0-fiscal-brain-foundation`
+- **Status da Fase 6.3:** **`FASE 6.3 = COMPLETE`**
+- **Status da Fase 6.4:** **`FASE 6.4 = AUTHORIZED`** (Pronta para Início Imediato)
 
 ---
 
@@ -23,12 +23,13 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 4. [docs/AGENT_PROTOCOL.md](docs/AGENT_PROTOCOL.md)
 5. [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)
 6. [docs/HANDOFF.md](docs/HANDOFF.md)
-7. [docs/PHASE6_2_PRODUCTION_LOCK.md](docs/PHASE6_2_PRODUCTION_LOCK.md)
-8. [docs/LEGAL_RAG_ARCHITECTURE.md](docs/LEGAL_RAG_ARCHITECTURE.md)
-9. [docs/LEGAL_ANSWER_GUARDRAILS.md](docs/LEGAL_ANSWER_GUARDRAILS.md)
-10. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
-11. Regras em [.agents/rules/](.agents/rules/)
-12. Código em `src/` e testes em `tests/`.
+7. [docs/FISCAL_BRAIN.md](docs/FISCAL_BRAIN.md)
+8. [docs/DECISION_ENGINE.md](docs/DECISION_ENGINE.md)
+9. [docs/TWO_BRAINS_ARCHITECTURE.md](docs/TWO_BRAINS_ARCHITECTURE.md)
+10. [docs/NFE_PARSING.md](docs/NFE_PARSING.md)
+11. [docs/DECISIONS.md](docs/DECISIONS.md) e arquivos em [docs/adr/](docs/adr/)
+12. Regras em [.agents/rules/](.agents/rules/)
+13. Código em `src/` e testes em `tests/`.
 
 ---
 
@@ -38,16 +39,13 @@ Siga o checklist do [.agents/workflows/start_session.md](.agents/workflows/start
 - [ ] Atualizar `docs/CHANGELOG.md`;
 - [ ] Atualizar `docs/CURRENT_STATE.md`;
 - [ ] Atualizar `docs/HANDOFF.md` com o próximo passo prioritário;
-- [ ] Criar novo ADR em `docs/adr/` se uma decisão arquitetural foi tomada;
-- [ ] Apresentar o Relatório Final com os itens obrigatórios da entrega.
+- [ ] Registrar decisões em `docs/DECISIONS.md` ou novos arquivos ADR em `docs/adr/`;
+- [ ] Fazer commit com mensagem semântica no Git.
 
 ---
 
 # 4. Próxima Tarefa Prioritária
 
-**Próxima Fase:** FASE 6.3 — FISCAL BRAIN & DECISION ENGINE (**AUTORIZADA**)  
-**Versão Atual:** `v0.9.1-contextual-rag-production-lock`  
-**Tarefa Imediata:** 
-1. Iniciar o desenvolvimento da FASE 6.3;
-2. Projetar a arquitetura do Fiscal Brain para classificação e regras tributárias (ICMS, PIS/COFINS, ISS, IBS/CBS/IS);
-3. Garantir que 100% dos pareceres do Fiscal Brain mantenham citações de evidência normativas auditáveis provindas da camada selada da Fase 6.2.
+**FASE 6.4 — FISCAL CO-PILOT & AUDIT DASHBOARD (AUTORIZADA)**
+- Implementar interface visual e assistente para auditoria da memória de cálculo e rastreabilidade Two-Brain.
+- Dashboard de revisão humana para alertas `REVIEW_REQUIRED` e `CONFLICT`.

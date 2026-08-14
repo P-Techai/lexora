@@ -73,6 +73,7 @@ class TaxRegime(str, Enum):
     LUCRO_PRESUMIDO = "LUCRO_PRESUMIDO"
     LUCRO_REAL = "LUCRO_REAL"
     MEI = "MEI"
+    OTHER = "OTHER"
 
 
 class TaxType(str, Enum):
@@ -86,6 +87,41 @@ class TaxType(str, Enum):
     CBS = "CBS"
     IBS = "IBS"
     IS = "IS"
+
+
+class ClassificationStatus(str, Enum):
+    CONFIRMED = "CONFIRMED"
+    PROVISIONAL = "PROVISIONAL"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
+    UNKNOWN = "UNKNOWN"
+
+
+class DecisionStatus(str, Enum):
+    APPROVED = "APPROVED"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
+    CONFLICT = "CONFLICT"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+    NO_APPLICABLE_RULE = "NO_APPLICABLE_RULE"
+
+
+class OperationType(str, Enum):
+    INTERNAL = "INTERNAL"
+    INTERSTATE = "INTERSTATE"
+    IMPORT = "IMPORT"
+    EXPORT = "EXPORT"
+
+
+class CustomerType(str, Enum):
+    TAXPAYER = "TAXPAYER"
+    NON_TAXPAYER = "NON_TAXPAYER"
+    FINAL_CONSUMER = "FINAL_CONSUMER"
+
+
+class InvoicePurpose(str, Enum):
+    NORMAL = "NORMAL"
+    COMPLEMENTARY = "COMPLEMENTARY"
+    ADJUSTMENT = "ADJUSTMENT"
+    RETURN = "RETURN"
 
 
 class NodeStatus(str, Enum):

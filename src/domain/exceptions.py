@@ -120,3 +120,35 @@ class TemporalAnswerError(LexoraDomainError):
 class ContextBudgetExceededError(LexoraDomainError):
     """Lançada quando a montagem do contexto excede o orçamento de caracteres/tokens permitido."""
     pass
+
+
+# --- Exceções do Fiscal Brain & Decision Engine ---
+
+class FiscalDomainError(LexoraDomainError):
+    """Exceção base para o subsistema Fiscal Brain."""
+    pass
+
+
+class TaxCalculationError(FiscalDomainError):
+    """Lançada quando ocorre erro no cálculo matemático tributário."""
+    pass
+
+
+class RuleConflictError(FiscalDomainError):
+    """Lançada quando duas regras fiscais entram em conflito sem prioridade determinística."""
+    pass
+
+
+class InvalidNFeXMLError(FiscalDomainError):
+    """Lançada quando o XML da NFe é malformado, inválido ou viola regras de segurança (XXE/size)."""
+    pass
+
+
+class MissingLegalBasisError(FiscalDomainError):
+    """Lançada quando uma regra fiscal tenta ser aprovada sem vinculação normativa/evidência."""
+    pass
+
+
+class DuplicateNFeError(FiscalDomainError):
+    """Lançada quando tenta-se ingerir uma NFe com chave de acesso ou hash XML duplicado."""
+    pass

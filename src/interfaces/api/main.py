@@ -1,8 +1,17 @@
+import uuid
 from datetime import date
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+from src.application.dto.fiscal_dto import (
+    FiscalCalculateResponse,
+    FiscalClassifyResponse,
+    FiscalDecisionResponse,
+    FiscalFactApiRequest,
+    NFeImportRequest,
+    NFeImportResponse,
+)
 from src.application.dto.retrieval_dto import (
     LegalRetrievalRequest,
     LegalRetrievalResultResponse,
@@ -10,15 +19,23 @@ from src.application.dto.retrieval_dto import (
 from src.application.services.context_builder import LegalContextBuilder
 from src.application.use_cases.retrieval.retrieve_and_answer import RetrieveAndAnswerUseCase
 from src.application.use_cases.retrieval.retrieve_legal_information import RetrieveLegalInformationUseCase
+from src.domain.decision.decision import Decision
 from src.domain.entities.legal_answer import LegalAnswer
 from src.domain.enums import DocumentType, Jurisdiction
+from src.domain.fiscal.fiscal_fact import FiscalFact
+from src.domain.services.decision.decision_engine import DecisionEngine
+from src.domain.services.fiscal.fiscal_classifier import FiscalClassifier
+from src.domain.services.fiscal.tax_calculator import TaxCalculator
+from src.domain.services.fiscal.tax_rule_evaluator import TaxRuleEvaluator
 from src.infrastructure.adapters.factory import EmbeddingProviderFactory, LegalAnswerGeneratorFactory
+from src.infrastructure.adapters.secure_nfe_parser import SecureNFeParser
+from src.infrastructure.db.repositories.postgres_fiscal_repositories import PostgresFiscalTaxRuleRepository
 from src.infrastructure.db.session import get_db_session
 
 app = FastAPI(
     title="LÉXORA API",
     description="Plataforma inteligente de conhecimento jurídico, tributário e contábil brasileiro.",
-    version="0.9.1-contextual-rag-production-lock",
+    version="0.10.0-fiscal-brain-foundation",
 )
 
 
@@ -34,7 +51,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         app_name="LÉXORA (LXR)",
-        version="0.9.1-contextual-rag-production-lock"
+        version="0.10.0-fiscal-brain-foundation"
     )
 
 
@@ -150,4 +167,157 @@ async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(g
         document_type=request.document_type,
         document_number=request.document_number,
         top_k=request.top_k
+    )
+
+
+# --- Endpoints da FASE 6.3 FISCAL BRAIN & DECISION ENGINE ---
+
+@app.post("/api/v1/fiscal/classify", response_model=FiscalClassifyResponse, tags=["Fiscal Brain"])
+async def classify_fiscal_fact(request: FiscalFactApiRequest):
+    """
+    Endpoint de classificação fiscal determinística de produto e fatos fiscais.
+    """
+    fact = FiscalFact(
+        fact_id=f"fact_{uuid.uuid4().hex[:8]}",
+        company_id=request.company_id,
+        tax_regime=request.tax_regime,
+        state=request.state,
+        municipality=request.municipality,
+        operation_type=request.operation_type,
+        operation_date=request.operation_date,
+        product_description=request.product_description,
+        quantity=request.quantity,
+        unit_value=request.unit_value,
+        total_value=request.total_value,
+        ncm=request.ncm,
+        cest=request.cest,
+        cfop=request.cfop,
+        cst=request.cst,
+        origin=request.origin,
+        customer_type=request.customer_type,
+        destination_state=request.destination_state,
+        supplier_state=request.supplier_state,
+        invoice_purpose=request.invoice_purpose,
+        additional_fields=request.additional_fields
+    )
+
+    classification = FiscalClassifier.classify_fact(fact)
+    return FiscalClassifyResponse(
+        classification=classification,
+        normalized_ncm=classification.ncm,
+        normalized_cst=classification.cst,
+        normalized_cfop=classification.cfop
+    )
+
+
+@app.post("/api/v1/fiscal/calculate", response_model=FiscalCalculateResponse, tags=["Fiscal Brain"])
+async def calculate_fiscal_taxes(request: FiscalFactApiRequest, session = Depends(get_db_session)):
+    """
+    Endpoint de cálculo determinístico de tributos com base nas regras ativas na data de operação.
+    """
+    fact = FiscalFact(
+        fact_id=f"fact_{uuid.uuid4().hex[:8]}",
+        company_id=request.company_id,
+        tax_regime=request.tax_regime,
+        state=request.state,
+        municipality=request.municipality,
+        operation_type=request.operation_type,
+        operation_date=request.operation_date,
+        product_description=request.product_description,
+        quantity=request.quantity,
+        unit_value=request.unit_value,
+        total_value=request.total_value,
+        ncm=request.ncm,
+        cest=request.cest,
+        cfop=request.cfop,
+        cst=request.cst,
+        origin=request.origin,
+        customer_type=request.customer_type,
+        destination_state=request.destination_state,
+        supplier_state=request.supplier_state,
+        invoice_purpose=request.invoice_purpose,
+        additional_fields=request.additional_fields
+    )
+
+    rule_repo = PostgresFiscalTaxRuleRepository(session)
+    active_rules = await rule_repo.list_all_active_rules(request.operation_date)
+    matching_rules = TaxRuleEvaluator.find_matching_rules(fact, active_rules)
+
+    calculations = [TaxCalculator.calculate_tax(fact, r) for r in matching_rules]
+    total_tax = sum((c.calculated_amount for c in calculations), start=request.total_value.__class__("0.00"))
+
+    return FiscalCalculateResponse(
+        calculations=calculations,
+        total_tax_amount=total_tax,
+        reference_date=request.operation_date
+    )
+
+
+@app.post("/api/v1/fiscal/decide", response_model=FiscalDecisionResponse, tags=["Decision Engine"])
+async def decide_fiscal_operation(request: FiscalFactApiRequest, session = Depends(get_db_session)):
+    """
+    Endpoint do Decision Engine de Produção.
+    Orquestra o Two-Brain Flow (Legal Brain + Fiscal Brain) produzindo decisão determinística com audit trail.
+    """
+    fact = FiscalFact(
+        fact_id=f"fact_{uuid.uuid4().hex[:8]}",
+        company_id=request.company_id,
+        tax_regime=request.tax_regime,
+        state=request.state,
+        municipality=request.municipality,
+        operation_type=request.operation_type,
+        operation_date=request.operation_date,
+        product_description=request.product_description,
+        quantity=request.quantity,
+        unit_value=request.unit_value,
+        total_value=request.total_value,
+        ncm=request.ncm,
+        cest=request.cest,
+        cfop=request.cfop,
+        cst=request.cst,
+        origin=request.origin,
+        customer_type=request.customer_type,
+        destination_state=request.destination_state,
+        supplier_state=request.supplier_state,
+        invoice_purpose=request.invoice_purpose,
+        additional_fields=request.additional_fields
+    )
+
+    rule_repo = PostgresFiscalTaxRuleRepository(session)
+    active_rules = await rule_repo.list_all_active_rules(request.operation_date)
+
+    engine = DecisionEngine(available_rules=active_rules)
+    decision: Decision = engine.evaluate(fact)
+
+    return FiscalDecisionResponse(
+        decision_id=decision.decision_id,
+        status=decision.status,
+        classification=decision.classification,
+        tax_results=decision.tax_results,
+        legal_basis=decision.legal_basis,
+        warnings=decision.warnings,
+        conflicts=decision.conflicts,
+        review_required=decision.review_required,
+        decision_hash=decision.decision_hash,
+        reference_date=decision.reference_date
+    )
+
+
+@app.post("/api/v1/nfe/import", response_model=NFeImportResponse, tags=["NFe Import"])
+async def import_nfe_xml(request: NFeImportRequest):
+    """
+    Endpoint de importação e parsing seguro de XML de NFe com verificação de idempotência SHA-256.
+    """
+    parser = SecureNFeParser()
+    xml_bytes = request.xml_content.encode("utf-8")
+    doc = parser.parse_xml(xml_bytes)
+
+    return NFeImportResponse(
+        access_key=doc.access_key,
+        raw_xml_hash=doc.raw_xml_hash,
+        issuer_cnpj=doc.issuer_cnpj,
+        recipient_cnpj=doc.recipient_cnpj,
+        issue_date=doc.issue_date,
+        items_count=len(doc.items),
+        total_invoice_amount=doc.total_invoice_amount
     )
