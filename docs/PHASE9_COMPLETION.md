@@ -7,7 +7,7 @@ Versão:
 v1.2.0-operational-tax-workbench
 
 Commit:
-<pending_commit>
+7a24856
 
 Migration HEAD:
 0013_operational_tax_workbench
