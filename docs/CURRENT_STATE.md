@@ -1,31 +1,35 @@
-# LÉXORA — Estado Atual do Projeto
+# LÉXORA — ESTADO ATUAL DA PLATAFORMA (CURRENT STATE)
 
-**Data da Última Atualização:** 2026-08-14  
-**Fase Atual:** FASE 6.3 — COMPLETE (Fiscal Brain & Decision Engine — Two-Brain Governance)  
-**Versão Atual:** `v0.10.0-fiscal-brain-foundation`  
-**Status da Fase 6.3:** **`FASE 6.3 = COMPLETE`**  
-**Status da Fase 6.4:** **`FASE 6.4 = AUTHORIZED`**  
-**Status do Projeto:** PROMPT 11 — PASS. Implementação Real do Fiscal Brain e Decision Engine sob governança Two-Brain: 1) Entidades e serviços de domínio determinísticos (`FiscalFact`, `FiscalProductProfile`, `FiscalTaxRule`, `TaxCalculation`, `Decision`, `DecisionTrace`); 2) Zero LLM em decisões tributárias (100% cálculo determinístico Decimal `TaxRoundingService`); 3) Avaliação temporal estrita contra `fact.operation_date` com `TemporalIntegrityValidator.is_date_in_range()`; 4) Parser seguro de NFe XML (`SecureNFeParser`) com proteção XXE e idempotência SHA-256; 5) Migration Alembic `0008_fiscal_brain` com restrição `ON DELETE RESTRICT`; 6) Endpoints `/api/v1/fiscal/classify`, `/api/v1/fiscal/calculate`, `/api/v1/fiscal/decide`, `/api/v1/nfe/import`; 7) Suíte de 40 testes unitários em `tests/unit/test_fiscal_brain.py` e testes PostgreSQL em `tests/integration/test_postgres_fiscal.py`; 8) Documentação e ADR-0017 centralizados.
-
----
-
-# 1. Resumo do Progresso Recente
-
-- **Fiscal Brain & Decision Engine (v0.10.0-fiscal-brain-foundation):**
-  - Implementação da arquitetura Two-Brain: Legal Brain (autoridade normativa) + Fiscal Brain (aplicador de regras formais) + Decision Engine (orquestrador determinístico).
-  - Cálculo tributário com precisão Decimal estrita (`TaxRoundingService`) suportando ICMS, ICMS_ST, IPI, PIS, COFINS, ISS, CBS, IBS, IS.
-  - Avaliação de regras tributárias pela data de operação (`operation_date`), sem uso de `datetime.now()` ou `date.today()`.
-  - Ingestão segura de XMLs de NFe com verificação de idempotência SHA-256 e proteção contra ataques XXE e Billion Laughs.
-  - Tabela de decisão com histórico imutável e rastreabilidade total (Fato -> Regra -> Cálculo -> Lei -> Artigo -> Evidência).
-  - Suíte completa de 40 cenários de testes unitários em `tests/unit/test_fiscal_brain.py`.
-- **Documentação & Relatórios:**
-  - `docs/FISCAL_BRAIN.md`, `docs/DECISION_ENGINE.md`, `docs/TWO_BRAINS_ARCHITECTURE.md`, `docs/NFE_PARSING.md`, `docs/adr/ADR-0017-fiscal-brain-decision-engine.md`.
+**Versão da Plataforma:** `v0.11.0-fiscal-copilot`  
+**Data:** 2026-08-14  
+**Status da Fase 6.4:** `COMPLETE`  
+**Migration HEAD:** `0009_fiscal_copilot_audit`  
+**Git Working Tree:** `Clean`  
 
 ---
 
-# 2. Próxima Tarefa Prioritária
+## 1. Visão Geral da Arquitetura
 
-**FASE 6.4 — FISCAL CO-PILOT & AUDIT DASHBOARD (AUTORIZADA)**
-1. Interface e assistente interativo para auditoria visual da memória de cálculo e rastreabilidade dos 2 Cérebros;
-2. Dashboard de divergências tributárias e alertas de revisão humana (`REVIEW_REQUIRED`, `CONFLICT`);
-3. Integração de relatórios executivos auditáveis.
+O LÉXORA (LXR) é uma plataforma inteligente e auditável para governança jurídica, fiscal e contábil no Brasil.
+
+### Módulos Principais:
+1. **Legal Brain:** Fonte autoritativa da legislação brasileira oficial (nós normativos, versões, evidências e artefatos brutos).
+2. **Fiscal Brain & Decision Engine:** Classificação fiscal determinística, avaliação temporal de regras em `operation_date` e matemática financeira `Decimal` em política `ROUND_HALF_UP` (zero LLM em decisões fiscais).
+3. **Fiscal Co-Pilot & Audit Dashboard (FASE 6.4):** Interface operacional web portável (`/dashboard`), assistente explicativo (`LLM = EXPLANATION ONLY`), máquina de estados de revisão humana, eventos de auditoria append-only (`ReviewEvent`), overrides imutáveis (`HumanOverride`) e motor de comparação (`FiscalDiffEngine`).
+
+---
+
+## 2. Status dos Componentes
+
+| Módulo / Fase | Status | Descrição |
+| :--- | :--- | :--- |
+| Fundação Jurídica (Fases 1–5) | `CLOSED` | Modelo canônico, temporalidade, proveniência e integridade relacional protegida. |
+| Fase 6.1 (Hybrid Legal Retrieval) | `COMPLETE` | Busca híbrida PostgreSQL vector + FTS. |
+| Fase 6.2 (Contextual Legal RAG) | `SEALED` | RAG contextual, Answer Guardrails e citação de proveniência. |
+| Fase 6.3 (Fiscal Brain & Decision Engine) | `COMPLETE` | Motores tributários determinísticos com precisão Decimal. |
+| Fase 6.4 (Fiscal Co-Pilot & Audit Dashboard) | `COMPLETE` | Interface web dashboard, Co-Pilot, workflow de revisão e audit trail. |
+
+---
+
+## 3. Próximos Passos
+- Inicialização da **FASE 6.5** sob demanda.
