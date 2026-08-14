@@ -8,3 +8,4 @@
 | ADR-0017 | 2026-08-14 | Fiscal Brain & Decision Engine | Aceito | Implementado na v0.10.0 |
 | ADR-0018 | 2026-08-14 | Fiscal Co-Pilot, Audit Dashboard e Revisão Humana | Aceito | Implementado na v0.11.0 |
 | ADR-0019 | 2026-08-14 | Classificação Fiscal de Produtos e Motor de Apuração | Aceito | Implementado na v0.12.0 |
+| ADR-0020 | 2026-08-14 | Motor Fiscal Operacional e Pipeline NF-e End-to-End | Aceito | Implementado na v1.0.0 |

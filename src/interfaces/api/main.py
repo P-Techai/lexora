@@ -31,6 +31,10 @@ from src.application.dto.fiscal_dto import (
     NFeImportRequest,
     NFeImportResponse,
 )
+from src.application.dto.nfe_analysis_dto import (
+    NFeAnalyzeRequest,
+    NFeAnalyzeResponse,
+)
 from src.application.dto.retrieval_dto import (
     LegalRetrievalRequest,
     LegalRetrievalResultResponse,
@@ -45,6 +49,7 @@ from src.domain.fiscal.fiscal_document_result import FiscalDocumentResult, Fisca
 from src.domain.fiscal.fiscal_fact import FiscalFact
 from src.domain.fiscal.fiscal_product_profile import FiscalProductProfile
 from src.domain.fiscal.fiscal_review import FiscalReview, HumanOverride
+from src.domain.fiscal.nfe_analysis_pipeline import NFeAnalysisPipeline, NFeAnalysisResult
 from src.domain.services.decision.decision_engine import DecisionEngine
 from src.domain.services.fiscal.audit_report_generator import AuditReportGenerator
 from src.domain.services.fiscal.divergence_engine import DivergenceEngine
@@ -67,7 +72,7 @@ from src.infrastructure.db.session import get_db_session
 app = FastAPI(
     title="LÉXORA API",
     description="Plataforma inteligente de conhecimento jurídico, tributário e contábil brasileiro.",
-    version="0.12.0-fiscal-classification-tax-engine",
+    version="1.0.0-operational-fiscal-engine",
 )
 
 
@@ -83,7 +88,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         app_name="LÉXORA (LXR)",
-        version="0.12.0-fiscal-classification-tax-engine"
+        version="1.0.0-operational-fiscal-engine"
     )
 
 
@@ -194,7 +199,39 @@ async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(g
     )
 
 
-# --- Endpoints FASE 6.5 (FISCAL CLASSIFICATION & TAX ENGINE) ---
+# --- Endpoints Operacionais FASE 7 (NF-e END-TO-END) ---
+
+@app.post("/api/v1/fiscal/nfe/analyze", response_model=NFeAnalyzeResponse, tags=["Operational Fiscal Pipeline"])
+async def analyze_nfe_operational(req: NFeAnalyzeRequest, session = Depends(get_db_session)):
+    rule_repo = PostgresFiscalTaxRuleRepository(session)
+    active_rules = await rule_repo.list_all_active_rules(req.reference_date)
+
+    xml_bytes = req.xml_content.encode("utf-8")
+    result: NFeAnalysisResult = NFeAnalysisPipeline.analyze_nfe_xml(
+        xml_bytes=xml_bytes,
+        company_id=req.company_id,
+        reference_date=req.reference_date,
+        available_rules=active_rules
+    )
+
+    return NFeAnalyzeResponse(
+        access_key=result.access_key,
+        raw_xml_hash=result.raw_xml_hash,
+        issuer_cnpj=result.issuer_cnpj,
+        recipient_cnpj=result.recipient_cnpj,
+        issue_date=result.issue_date,
+        items_analyzed=result.items_analyzed,
+        total_invoice_amount=result.total_invoice_amount,
+        total_tax_amount=result.total_tax_amount,
+        tax_totals_by_type=result.tax_totals_by_type,
+        item_results=result.item_results,
+        master_decision_id=result.master_decision_id,
+        review_required=result.review_required,
+        analysis_hash=result.analysis_hash
+    )
+
+
+# --- Endpoints da FASE 6.3 - 6.5 ---
 
 @app.post("/api/v1/fiscal/classify/item", response_model=ClassifyItemResponse, tags=["Classification"])
 async def classify_product_item(req: ClassifyItemRequest, session = Depends(get_db_session)):
@@ -1064,7 +1101,7 @@ async def render_dashboard():
         <header>
             <div>
                 <h1>Dashboard de Auditoria Fiscal & Co-Pilot</h1>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Versão v0.12.0-fiscal-classification-tax-engine | Motor Determinístico Two-Brain</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Versão v1.0.0-operational-fiscal-engine | Motor Determinístico Two-Brain</p>
             </div>
             <button onclick="refreshData()">🔄 Atualizar Dados</button>
         </header>

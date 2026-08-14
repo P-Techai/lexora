@@ -1,21 +1,25 @@
-# LÉXORA — RELATÓRIO DE HANDOFF DA FASE 6.5
+# LÉXORA — RELATÓRIO DE HANDOFF DA FASE 7
 
 **Data:** 2026-08-14  
-**Versão Atual:** `v0.12.0-fiscal-classification-tax-engine`  
-**Migration HEAD:** `0010_fiscal_classification_tax_engine`  
+**Versão Atual:** `v1.0.0-operational-fiscal-engine`  
+**Migration HEAD:** `0011_nfe_operational_fiscal_engine`  
 
 ---
 
 ## 1. Resumo Executivo
-A **FASE 6.5 — PRODUCT FISCAL CLASSIFICATION & TAX CALCULATION ENGINE** foi implementada e concluída com sucesso.
+A **FASE 7 — OPERATIONAL FISCAL ENGINE & NF-e END-TO-END** foi implementada e concluída com sucesso.
 
 ### Destaques da Entrega:
-- **Perfis Fiscais de Produtos (`FiscalProductProfile`):** Suporte cadastral a GTIN, SKU, NCM, CEST, unidade e origem com classificação determinística.
-- **Memórias de Cálculo Auditáveis (`CalculationMemory`):** Reconstrução explícita das fórmulas e inputs para ICMS, ICMS-ST, IPI, PIS, COFINS, ISS, FCP, FCP-ST em precisão `Decimal` (`ROUND_HALF_UP`).
-- **Autoridade Temporal:** Regras resolvidas contra `operation_date` (`effective_from <= operation_date < effective_until`).
-- **Reprocessamento Não-Destrutivo (`ReprocessingService`):** Execuções salvas com preservação integral das decisões históricas originais.
-- **Migration Alembic `0010_fiscal_classification_tax_engine`:** Tabelas relacionais protegidas por `ON DELETE RESTRICT`.
-- **Suíte de Testes:** 26 testes unitários, Golden Scenarios 1, 2, 3 e testes PostgreSQL 100% aprovados.
+- **Pipeline Operacional NF-e (`NFeAnalysisPipeline`):** Ingestão e análise determinística de payloads XML via `POST /api/v1/fiscal/nfe/analyze`.
+- **Segurança XML & Defesa XXE:** Leitura segura via `SecureNFeParser` com desativação total de entidades externas e limite de 10MB.
+- **Cinco Cenários Golden:**
+  - `GOLDEN-01`: Operação interna (ICMS, PIS, COFINS).
+  - `GOLDEN-02`: Operação interestadual (ICMS, DIFAL, FCP).
+  - `GOLDEN-03`: Regra temporal (Data de operação de 2024 avalia regras de 2024 e não de 2025).
+  - `GOLDEN-04`: Caso ambíguo exigindo `HUMAN REVIEW`.
+  - `GOLDEN-05`: Conflito normativo exigindo `HUMAN REVIEW`.
+- **Migration Alembic `0011_nfe_operational_fiscal_engine`:** Tabela `fiscal_nfe_analyses` com proteção `ON DELETE RESTRICT`.
+- **Suíte de Testes:** 30 testes unitários, 5 cenários Golden e testes PostgreSQL 100% aprovados.
 
 ---
 
