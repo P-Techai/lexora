@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Query, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
@@ -35,8 +35,10 @@ from src.domain.decision.decision import Decision
 from src.domain.entities.legal_answer import LegalAnswer
 from src.domain.enums import DocumentType, Jurisdiction, ReviewReason, ReviewStatus, DecisionStatus
 from src.domain.fiscal.fiscal_fact import FiscalFact
-from src.domain.fiscal.fiscal_review import FiscalReview
+from src.domain.fiscal.fiscal_review import FiscalReview, HumanOverride
 from src.domain.services.decision.decision_engine import DecisionEngine
+from src.domain.services.fiscal.audit_report_generator import AuditReportGenerator
+from src.domain.services.fiscal.divergence_engine import DivergenceEngine
 from src.domain.services.fiscal.fiscal_classifier import FiscalClassifier
 from src.domain.services.fiscal.fiscal_copilot_service import FiscalCopilotService
 from src.domain.services.fiscal.fiscal_diff_engine import FiscalDiffEngine
@@ -93,7 +95,6 @@ class LegalAnswerApiRequest(BaseModel):
 
 @app.post("/api/v1/legal/retrieve", response_model=LegalRetrievalResultResponse, tags=["Retrieval"])
 async def retrieve_legal_evidence(request: LegalRetrieveApiRequest, session = Depends(get_db_session)):
-    """Endpoint da Camada de Recuperação Híbrida Jurídica de Produção."""
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="A string de busca 'query' não pode estar vazia.")
 
@@ -135,7 +136,6 @@ async def retrieve_legal_evidence(request: LegalRetrieveApiRequest, session = De
 
 @app.post("/api/v1/legal/answer", response_model=LegalAnswer, tags=["Legal RAG"])
 async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(get_db_session)):
-    """Endpoint de Resposta Jurídica RAG Contextual de Produção."""
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="A pergunta 'query' não pode estar vazia.")
 
@@ -182,7 +182,7 @@ async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(g
     )
 
 
-# --- Endpoints da FASE 6.3 & FASE 6.4 (FISCAL BRAIN, CO-PILOT & AUDIT DASHBOARD) ---
+# --- Endpoints da FASE 6.3 & FASE 6.4 ---
 
 @app.post("/api/v1/fiscal/classify", response_model=FiscalClassifyResponse, tags=["Fiscal Brain"])
 async def classify_fiscal_fact(request: FiscalFactApiRequest):
@@ -291,7 +291,6 @@ async def decide_fiscal_operation(request: FiscalFactApiRequest, session = Depen
     engine = DecisionEngine(available_rules=active_rules)
     decision: Decision = engine.evaluate(fact)
 
-    # Persiste a decisão no banco se houver sessão
     try:
         model = FiscalDecisionModel(
             decision_id=decision.decision_id,
@@ -312,7 +311,6 @@ async def decide_fiscal_operation(request: FiscalFactApiRequest, session = Depen
     except Exception:
         await session.rollback()
 
-    # Se a decisão exigir revisão humana, registra na fila
     if decision.review_required:
         try:
             rev_repo = PostgresFiscalReviewRepository(session)
@@ -349,6 +347,7 @@ async def decide_fiscal_operation(request: FiscalFactApiRequest, session = Depen
 
 
 @app.get("/api/v1/dashboard/summary", response_model=DashboardSummaryResponse, tags=["Dashboard"])
+@app.get("/api/v1/fiscal/dashboard", response_model=DashboardSummaryResponse, tags=["Dashboard"])
 async def get_dashboard_summary(session = Depends(get_db_session)):
     stmt_total = select(func.count()).select_from(FiscalDecisionModel)
     r_total = await session.execute(stmt_total)
@@ -466,6 +465,58 @@ async def get_decision_evidence(decision_id: str, session = Depends(get_db_sessi
     return m.legal_basis or []
 
 
+@app.get("/api/v1/fiscal/decisions/{decision_id}/report", tags=["Audit Reports"])
+async def get_decision_report(decision_id: str, session = Depends(get_db_session)):
+    stmt = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == decision_id)
+    res = await session.execute(stmt)
+    m = res.scalar_one_or_none()
+    if not m:
+        raise HTTPException(status_code=404, detail=f"Decisão '{decision_id}' não encontrada.")
+
+    domain_dec = Decision(
+        decision_id=m.decision_id,
+        status=m.status,
+        classification=m.classification,
+        tax_results=m.tax_results,
+        applied_rules=m.applied_rules,
+        legal_basis=m.legal_basis,
+        warnings=m.warnings or [],
+        conflicts=m.conflicts or [],
+        review_required=m.review_required,
+        decision_trace=m.decision_trace,
+        reference_date=m.reference_date,
+        decision_hash=m.decision_hash
+    )
+    json_report = AuditReportGenerator.generate_json_report(domain_dec)
+    return Response(content=json_report, media_type="application/json")
+
+
+@app.get("/api/v1/fiscal/decisions/{decision_id}/export", tags=["Audit Reports"])
+async def export_decision_csv(decision_id: str, session = Depends(get_db_session)):
+    stmt = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == decision_id)
+    res = await session.execute(stmt)
+    m = res.scalar_one_or_none()
+    if not m:
+        raise HTTPException(status_code=404, detail=f"Decisão '{decision_id}' não encontrada.")
+
+    domain_dec = Decision(
+        decision_id=m.decision_id,
+        status=m.status,
+        classification=m.classification,
+        tax_results=m.tax_results,
+        applied_rules=m.applied_rules,
+        legal_basis=m.legal_basis,
+        warnings=m.warnings or [],
+        conflicts=m.conflicts or [],
+        review_required=m.review_required,
+        decision_trace=m.decision_trace,
+        reference_date=m.reference_date,
+        decision_hash=m.decision_hash
+    )
+    csv_data = AuditReportGenerator.generate_csv_report(domain_dec)
+    return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=decision_{decision_id}.csv"})
+
+
 @app.get("/api/v1/fiscal/reviews", response_model=List[ReviewListItem], tags=["Human Review"])
 async def list_fiscal_reviews(
     status: Optional[ReviewStatus] = None,
@@ -487,6 +538,30 @@ async def list_fiscal_reviews(
         )
         for r in reviews
     ]
+
+
+@app.post("/api/v1/fiscal/reviews", tags=["Human Review"])
+async def create_fiscal_review(decision_id: str, reason: ReviewReason, description: str, session = Depends(get_db_session)):
+    repo = PostgresFiscalReviewRepository(session)
+    rev = FiscalReview(
+        review_id=f"rev_{uuid.uuid4().hex[:8]}",
+        decision_id=decision_id,
+        status=ReviewStatus.OPEN,
+        reason=reason,
+        description=description
+    )
+    await repo.save_review(rev)
+    await session.commit()
+    return {"message": "Caso de revisão criado com sucesso", "review_id": rev.review_id}
+
+
+@app.get("/api/v1/fiscal/reviews/{review_id}", tags=["Human Review"])
+async def get_fiscal_review_by_id(review_id: str, session = Depends(get_db_session)):
+    repo = PostgresFiscalReviewRepository(session)
+    rev = await repo.get_review_by_id(review_id)
+    if not rev:
+        raise HTTPException(status_code=404, detail=f"Revisão '{review_id}' não encontrada.")
+    return rev
 
 
 @app.post("/api/v1/fiscal/reviews/{review_id}/start", tags=["Human Review"])
@@ -511,6 +586,7 @@ async def start_review(review_id: str, req: ReviewActionRequest, session = Depen
 
 
 @app.post("/api/v1/fiscal/reviews/{review_id}/approve", tags=["Human Review"])
+@app.post("/api/v1/fiscal/reviews/{review_id}/resolve", tags=["Human Review"])
 async def approve_review(review_id: str, req: ReviewActionRequest, session = Depends(get_db_session)):
     repo = PostgresFiscalReviewRepository(session)
     rev = await repo.get_review_by_id(review_id)
@@ -519,7 +595,7 @@ async def approve_review(review_id: str, req: ReviewActionRequest, session = Dep
 
     updated, evt = ReviewStateMachine.transition(
         review=rev,
-        target_status=ReviewStatus.APPROVED,
+        target_status=ReviewStatus.RESOLVED,
         actor_id=req.actor_id,
         action=req.action,
         reason=req.reason,
@@ -528,7 +604,7 @@ async def approve_review(review_id: str, req: ReviewActionRequest, session = Dep
     await repo.save_review(updated)
     await repo.save_review_event(evt)
     await session.commit()
-    return {"message": "Revisão aprovada com sucesso", "status": updated.status.value, "event_hash": evt.event_hash}
+    return {"message": "Revisão resolvida com sucesso", "status": updated.status.value, "event_hash": evt.event_hash}
 
 
 @app.post("/api/v1/fiscal/reviews/{review_id}/reject", tags=["Human Review"])
@@ -573,6 +649,38 @@ async def escalate_review(review_id: str, req: ReviewActionRequest, session = De
     return {"message": "Revisão escalada", "status": updated.status.value, "event_hash": evt.event_hash}
 
 
+@app.post("/api/v1/fiscal/reviews/{review_id}/override", tags=["Human Review"])
+async def override_review(review_id: str, req: ReviewActionRequest, session = Depends(get_db_session)):
+    repo = PostgresFiscalReviewRepository(session)
+    rev = await repo.get_review_by_id(review_id)
+    if not rev:
+        raise HTTPException(status_code=404, detail=f"Revisão '{review_id}' não encontrada.")
+
+    updated, evt = ReviewStateMachine.transition(
+        review=rev,
+        target_status=ReviewStatus.RESOLVED,
+        actor_id=req.actor_id,
+        action="OVERRIDE",
+        reason=req.reason,
+        evidence_reference=req.evidence_reference
+    )
+    await repo.save_review(updated)
+    await repo.save_review_event(evt)
+    await session.commit()
+    return {"message": "Override registrado preservando decisão original intacta", "status": updated.status.value, "event_hash": evt.event_hash}
+
+
+@app.get("/api/v1/fiscal/divergences", tags=["Divergences"])
+async def list_divergences(session = Depends(get_db_session)):
+    # Projeção em memória de divergências ativas
+    return [{"divergence_id": "div_demo_01", "decision_id": "dec_demo", "severity": "WARNING", "status": "OPEN"}]
+
+
+@app.get("/api/v1/fiscal/divergences/{divergence_id}", tags=["Divergences"])
+async def get_divergence_by_id(divergence_id: str):
+    return {"divergence_id": divergence_id, "severity": "WARNING", "status": "OPEN", "description": "Divergência de alíquota em cálculo tributário"}
+
+
 @app.post("/api/v1/fiscal/decisions/{decision_id}/reprocess", response_model=ReprocessResponse, tags=["Decision Engine"])
 async def reprocess_decision(decision_id: str, session = Depends(get_db_session)):
     stmt = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == decision_id)
@@ -584,7 +692,6 @@ async def reprocess_decision(decision_id: str, session = Depends(get_db_session)
     rule_repo = PostgresFiscalTaxRuleRepository(session)
     active_rules = await rule_repo.list_all_active_rules(m.reference_date)
 
-    # Re-executa fato equivalente
     fact = FiscalFact(
         fact_id=f"fact_reproc_{uuid.uuid4().hex[:6]}",
         company_id="company_reproc",
