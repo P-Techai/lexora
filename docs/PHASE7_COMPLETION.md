@@ -7,13 +7,13 @@ Versão:
 v1.0.0-operational-fiscal-engine
 
 Commit:
-<pending_commit>
+9c6bf15
 
 Migration HEAD:
 0011_nfe_operational_fiscal_engine
 
 Tests:
-PASS = 40
+PASS = 35
 FAIL = 0
 SKIPPED = 0
 
