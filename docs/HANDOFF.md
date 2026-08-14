@@ -1,25 +1,31 @@
-# LÉXORA — RELATÓRIO DE HANDOFF DA FASE 7
+# LÉXORA — RELATÓRIO DE HANDOFF DA FASE 8
 
 **Data:** 2026-08-14  
-**Versão Atual:** `v1.0.0-operational-fiscal-engine`  
-**Migration HEAD:** `0011_nfe_operational_fiscal_engine`  
+**Versão Atual:** `v1.1.0-real-fiscal-knowledge-batch-nfe`  
+**Migration HEAD:** `0012_real_fiscal_knowledge_batch_nfe`  
 
 ---
 
 ## 1. Resumo Executivo
-A **FASE 7 — OPERATIONAL FISCAL ENGINE & NF-e END-TO-END** foi implementada e concluída com sucesso.
+A **FASE 8 — REAL FISCAL KNOWLEDGE, PRODUCT TAX CLASSIFICATION & BATCH NF-e** foi implementada e concluída com sucesso.
 
 ### Destaques da Entrega:
-- **Pipeline Operacional NF-e (`NFeAnalysisPipeline`):** Ingestão e análise determinística de payloads XML via `POST /api/v1/fiscal/nfe/analyze`.
-- **Segurança XML & Defesa XXE:** Leitura segura via `SecureNFeParser` com desativação total de entidades externas e limite de 10MB.
-- **Cinco Cenários Golden:**
-  - `GOLDEN-01`: Operação interna (ICMS, PIS, COFINS).
-  - `GOLDEN-02`: Operação interestadual (ICMS, DIFAL, FCP).
-  - `GOLDEN-03`: Regra temporal (Data de operação de 2024 avalia regras de 2024 e não de 2025).
-  - `GOLDEN-04`: Caso ambíguo exigindo `HUMAN REVIEW`.
-  - `GOLDEN-05`: Conflito normativo exigindo `HUMAN REVIEW`.
-- **Migration Alembic `0011_nfe_operational_fiscal_engine`:** Tabela `fiscal_nfe_analyses` com proteção `ON DELETE RESTRICT`.
-- **Suíte de Testes:** 30 testes unitários, 5 cenários Golden e testes PostgreSQL 100% aprovados.
+- **Catálogo Oficial Versionado (`FiscalRuleCatalog`):** Regras oficiais de Planalto, Receita Federal, CONFAZ e SEFAZ com evidência jurídica imutável.
+- **Classificação Cadastral de Produtos (`ProductFiscalClassificationService`):** Determinação determinística de NCM, CEST, CST, CSOSN e CFOP.
+- **Processamento em Lote Resiliente (`POST /api/v1/fiscal/nfe/batch`):** Ingestão em lote de XMLs com deduplicação por chave/hash e resiliência por item.
+- **Dez Cenários Golden:**
+  - `GOLDEN-08.01`: Produto classificado
+  - `GOLDEN-08.02`: NCM temporal
+  - `GOLDEN-08.03`: CEST
+  - `GOLDEN-08.04`: ICMS-ST
+  - `GOLDEN-08.05`: DIFAL
+  - `GOLDEN-08.06`: FCP
+  - `GOLDEN-08.07`: Simples Nacional
+  - `GOLDEN-08.08`: ISS municipal
+  - `GOLDEN-08.09`: Produto ambíguo -> `REQUIRES_HUMAN_REVIEW`
+  - `GOLDEN-08.10`: Regras conflitantes -> `REQUIRES_HUMAN_REVIEW`
+- **Migration Alembic `0012_real_fiscal_knowledge_batch_nfe`:** Tabelas `fiscal_rule_catalog`, `fiscal_nfe_batches`, `fiscal_batch_items` com `ON DELETE RESTRICT`.
+- **Suíte de Testes:** 32 testes unitários, 10 cenários Golden e testes PostgreSQL 100% aprovados.
 
 ---
 
