@@ -303,6 +303,35 @@ async def decide_fiscal_operation(request: FiscalFactApiRequest, session = Depen
     )
 
 
+@app.get("/api/v1/fiscal/decisions/{decision_id}", response_model=FiscalDecisionResponse, tags=["Decision Engine"])
+async def get_fiscal_decision_by_id(decision_id: str, session = Depends(get_db_session)):
+    """
+    Endpoint para recuperação de decisão fiscal histórica por ID determinístico.
+    """
+    from sqlalchemy import select
+    from src.infrastructure.db.models.postgres_fiscal_models import FiscalDecisionModel
+
+    stmt = select(FiscalDecisionModel).where(FiscalDecisionModel.decision_id == decision_id)
+    result = await session.execute(stmt)
+    m = result.scalar_one_or_none()
+
+    if not m:
+        raise HTTPException(status_code=404, detail=f"Decisão fiscal '{decision_id}' não encontrada.")
+
+    return FiscalDecisionResponse(
+        decision_id=m.decision_id,
+        status=m.status,
+        classification=m.classification,
+        tax_results=m.tax_results,
+        legal_basis=m.legal_basis,
+        warnings=m.warnings or [],
+        conflicts=m.conflicts or [],
+        review_required=m.review_required,
+        decision_hash=m.decision_hash,
+        reference_date=m.reference_date
+    )
+
+
 @app.post("/api/v1/nfe/import", response_model=NFeImportResponse, tags=["NFe Import"])
 async def import_nfe_xml(request: NFeImportRequest):
     """
