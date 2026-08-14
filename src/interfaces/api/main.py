@@ -254,6 +254,7 @@ async def calculate_fiscal_taxes(request: FiscalFactApiRequest, session = Depend
 
 
 @app.post("/api/v1/fiscal/decide", response_model=FiscalDecisionResponse, tags=["Decision Engine"])
+@app.post("/api/v1/fiscal/evaluate", response_model=FiscalDecisionResponse, tags=["Decision Engine"])
 async def decide_fiscal_operation(request: FiscalFactApiRequest, session = Depends(get_db_session)):
     """
     Endpoint do Decision Engine de Produção.
@@ -304,6 +305,7 @@ async def decide_fiscal_operation(request: FiscalFactApiRequest, session = Depen
 
 
 @app.get("/api/v1/fiscal/decisions/{decision_id}", response_model=FiscalDecisionResponse, tags=["Decision Engine"])
+@app.get("/api/v1/fiscal/decision/{decision_id}", response_model=FiscalDecisionResponse, tags=["Decision Engine"])
 async def get_fiscal_decision_by_id(decision_id: str, session = Depends(get_db_session)):
     """
     Endpoint para recuperação de decisão fiscal histórica por ID determinístico.
