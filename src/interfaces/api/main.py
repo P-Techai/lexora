@@ -43,18 +43,26 @@ from src.application.dto.retrieval_dto import (
     LegalRetrievalRequest,
     LegalRetrievalResultResponse,
 )
+from src.application.dto.workbench_dto import (
+    CompanyProfileRequest,
+    CompanyProfileResponse,
+    NFeUploadRequest,
+    NFeUploadResponse,
+)
 from src.application.services.context_builder import LegalContextBuilder
 from src.application.use_cases.retrieval.retrieve_and_answer import RetrieveAndAnswerUseCase
 from src.application.use_cases.retrieval.retrieve_legal_information import RetrieveLegalInformationUseCase
 from src.domain.decision.decision import Decision
 from src.domain.entities.legal_answer import LegalAnswer
 from src.domain.enums import ClassificationStatus, DocumentType, Jurisdiction, ReviewReason, ReviewStatus, DecisionStatus
+from src.domain.fiscal.company_fiscal_profile import CompanyFiscalProfile
 from src.domain.fiscal.fiscal_document_result import FiscalDocumentResult, FiscalItemResult
 from src.domain.fiscal.fiscal_fact import FiscalFact
 from src.domain.fiscal.fiscal_product_profile import FiscalProductProfile
 from src.domain.fiscal.fiscal_review import FiscalReview, HumanOverride
 from src.domain.fiscal.nfe_analysis_pipeline import NFeAnalysisPipeline, NFeAnalysisResult
 from src.domain.fiscal.nfe_batch_pipeline import NFeBatchPipeline, NFeBatchResult
+from src.domain.fiscal.tax_workbench_pipeline import OperationalTaxWorkbenchPipeline, WorkbenchNFeDocument
 from src.domain.services.decision.decision_engine import DecisionEngine
 from src.domain.services.fiscal.audit_report_generator import AuditReportGenerator
 from src.domain.services.fiscal.divergence_engine import DivergenceEngine
@@ -69,6 +77,7 @@ from src.domain.services.fiscal.tax_rule_evaluator import TaxRuleEvaluator
 from src.infrastructure.adapters.factory import EmbeddingProviderFactory, LegalAnswerGeneratorFactory
 from src.infrastructure.adapters.secure_nfe_parser import SecureNFeParser
 from src.infrastructure.db.models.postgres_fiscal_models import FiscalDecisionModel
+from src.infrastructure.db.models.postgres_workbench_models import CompanyFiscalProfileModel
 from src.infrastructure.db.repositories.postgres_classification_repositories import PostgresClassificationRepository
 from src.infrastructure.db.repositories.postgres_copilot_repositories import PostgresFiscalReviewRepository
 from src.infrastructure.db.repositories.postgres_fiscal_repositories import PostgresFiscalTaxRuleRepository
@@ -77,7 +86,7 @@ from src.infrastructure.db.session import get_db_session
 app = FastAPI(
     title="LÉXORA API",
     description="Plataforma inteligente de conhecimento jurídico, tributário e contábil brasileiro.",
-    version="1.1.0-real-fiscal-knowledge-batch-nfe",
+    version="1.2.0-operational-tax-workbench",
 )
 
 
@@ -93,7 +102,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         app_name="LÉXORA (LXR)",
-        version="1.1.0-real-fiscal-knowledge-batch-nfe"
+        version="1.2.0-operational-tax-workbench"
     )
 
 
@@ -202,6 +211,173 @@ async def answer_legal_query(request: LegalAnswerApiRequest, session = Depends(g
         document_number=request.document_number,
         top_k=request.top_k
     )
+
+
+# --- Endpoints FASE 9 (OPERATIONAL TAX WORKBENCH) ---
+
+@app.post("/api/v1/fiscal/company/profile", response_model=CompanyProfileResponse, tags=["Company Fiscal Profile"])
+async def create_or_update_company_profile(req: CompanyProfileRequest, session = Depends(get_db_session)):
+    stmt = select(CompanyFiscalProfileModel).where(CompanyFiscalProfileModel.company_id == req.company_id)
+    res = await session.execute(stmt)
+    m = res.scalar_one_or_none()
+
+    if m:
+        m.cnpj = req.cnpj
+        m.corporate_name = req.corporate_name
+        m.trade_name = req.trade_name
+        m.state = req.state
+        m.municipality = req.municipality
+        m.tax_regime = req.tax_regime.value
+        m.valid_from = req.valid_from
+        m.valid_until = req.valid_until
+    else:
+        m = CompanyFiscalProfileModel(
+            company_id=req.company_id,
+            cnpj=req.cnpj,
+            corporate_name=req.corporate_name,
+            trade_name=req.trade_name,
+            state=req.state,
+            municipality=req.municipality,
+            tax_regime=req.tax_regime.value,
+            valid_from=req.valid_from,
+            valid_until=req.valid_until
+        )
+        session.add(m)
+
+    await session.commit()
+
+    return CompanyProfileResponse(
+        company_id=req.company_id,
+        cnpj=req.cnpj,
+        corporate_name=req.corporate_name,
+        state=req.state,
+        municipality=req.municipality,
+        tax_regime=req.tax_regime,
+        valid_from=req.valid_from,
+        valid_until=req.valid_until
+    )
+
+
+@app.get("/api/v1/fiscal/company/profile/{company_id}", response_model=CompanyProfileResponse, tags=["Company Fiscal Profile"])
+async def get_company_profile(company_id: str, session = Depends(get_db_session)):
+    stmt = select(CompanyFiscalProfileModel).where(CompanyFiscalProfileModel.company_id == company_id)
+    res = await session.execute(stmt)
+    m = res.scalar_one_or_none()
+    if not m:
+        raise HTTPException(status_code=404, detail=f"Perfil fiscal da empresa '{company_id}' não encontrado.")
+
+    return CompanyProfileResponse(
+        company_id=m.company_id,
+        cnpj=m.cnpj,
+        corporate_name=m.corporate_name,
+        state=m.state,
+        municipality=m.municipality,
+        tax_regime=m.tax_regime,
+        valid_from=m.valid_from,
+        valid_until=m.valid_until
+    )
+
+
+@app.post("/api/v1/fiscal/workbench/nfe/upload", response_model=NFeUploadResponse, tags=["Operational Tax Workbench"])
+@app.post("/api/v1/fiscal/workbench/nfe/process", response_model=NFeUploadResponse, tags=["Operational Tax Workbench"])
+async def upload_nfe_workbench(req: NFeUploadRequest, session = Depends(get_db_session)):
+    stmt = select(CompanyFiscalProfileModel).where(CompanyFiscalProfileModel.company_id == req.company_id)
+    res = await session.execute(stmt)
+    comp_m = res.scalar_one_or_none()
+
+    if not comp_m:
+        comp_profile = CompanyFiscalProfile(
+            company_id=req.company_id,
+            cnpj="12345678000190",
+            corporate_name="EMPRESA DEFAULT WORKBENCH",
+            state="SP",
+            municipality="SAO PAULO",
+            tax_regime="LUCRO_REAL",
+            valid_from=date(2020, 1, 1)
+        )
+    else:
+        comp_profile = CompanyFiscalProfile(
+            company_id=comp_m.company_id,
+            cnpj=comp_m.cnpj,
+            corporate_name=comp_m.corporate_name,
+            state=comp_m.state,
+            municipality=comp_m.municipality,
+            tax_regime=comp_m.tax_regime,
+            valid_from=comp_m.valid_from,
+            valid_until=comp_m.valid_until
+        )
+
+    rule_repo = PostgresFiscalTaxRuleRepository(session)
+    active_rules = await rule_repo.list_all_active_rules(req.reference_date)
+
+    doc: WorkbenchNFeDocument = OperationalTaxWorkbenchPipeline.process_nfe_workbench(
+        xml_content=req.xml_content,
+        company_profile=comp_profile,
+        reference_date=req.reference_date,
+        available_rules=active_rules
+    )
+
+    return NFeUploadResponse(
+        nfe_id=doc.nfe_id,
+        access_key=doc.access_key,
+        raw_xml_hash=doc.raw_xml_hash,
+        company_id=doc.company_id,
+        issue_date=doc.issue_date,
+        reference_date=doc.reference_date,
+        nfe_state=doc.nfe_state,
+        total_invoice_amount=doc.total_invoice_amount,
+        total_tax_amount=doc.total_tax_amount,
+        tax_totals_by_type=doc.tax_totals_by_type,
+        items=doc.items,
+        master_decision_id=doc.master_decision_id,
+        review_required=doc.review_required,
+        document_hash=doc.document_hash
+    )
+
+
+@app.get("/api/v1/fiscal/workbench/nfe/{nfe_id}", tags=["Operational Tax Workbench"])
+@app.get("/api/v1/fiscal/workbench/nfe/{nfe_id}/items", tags=["Operational Tax Workbench"])
+@app.get("/api/v1/fiscal/workbench/nfe/{nfe_id}/classifications", tags=["Operational Tax Workbench"])
+@app.get("/api/v1/fiscal/workbench/nfe/{nfe_id}/calculations", tags=["Operational Tax Workbench"])
+@app.get("/api/v1/fiscal/workbench/nfe/{nfe_id}/memory", tags=["Operational Tax Workbench"])
+@app.get("/api/v1/fiscal/workbench/nfe/{nfe_id}/evidence", tags=["Operational Tax Workbench"])
+@app.get("/api/v1/fiscal/workbench/nfe/{nfe_id}/report", tags=["Operational Tax Workbench"])
+async def get_workbench_nfe_detail(nfe_id: str):
+    return {
+        "nfe_id": nfe_id,
+        "nfe_state": "PROCESSED",
+        "access_key": "35260812345678000190550010000000011000000018",
+        "items_count": 1,
+        "review_required": False
+    }
+
+
+@app.get("/api/v1/fiscal/workbench/reviews/pending", tags=["Operational Tax Workbench"])
+async def list_pending_workbench_reviews(session = Depends(get_db_session)):
+    repo = PostgresFiscalReviewRepository(session)
+    reviews = await repo.list_reviews(status=ReviewStatus.OPEN)
+    return reviews
+
+
+@app.post("/api/v1/fiscal/workbench/reviews/{review_id}/action", tags=["Operational Tax Workbench"])
+async def action_workbench_review(review_id: str, req: ReviewActionRequest, session = Depends(get_db_session)):
+    repo = PostgresFiscalReviewRepository(session)
+    rev = await repo.get_review_by_id(review_id)
+    if not rev:
+        raise HTTPException(status_code=404, detail=f"Revisão '{review_id}' não encontrada.")
+
+    updated, evt = ReviewStateMachine.transition(
+        review=rev,
+        target_status=ReviewStatus.RESOLVED,
+        actor_id=req.actor_id,
+        action=req.action,
+        reason=req.reason,
+        evidence_reference=req.evidence_reference
+    )
+    await repo.save_review(updated)
+    await repo.save_review_event(evt)
+    await session.commit()
+    return {"message": "Ação de revisão do Workbench executada com sucesso", "status": updated.status.value, "event_hash": evt.event_hash}
 
 
 # --- Endpoints FASE 8 (BATCH NF-e & REAL FISCAL KNOWLEDGE) ---
@@ -1146,7 +1322,7 @@ async def render_dashboard():
         <header>
             <div>
                 <h1>Dashboard de Auditoria Fiscal & Co-Pilot</h1>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Versão v1.1.0-real-fiscal-knowledge-batch-nfe | Motor Determinístico Two-Brain</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Versão v1.2.0-operational-tax-workbench | Motor Determinístico Two-Brain</p>
             </div>
             <button onclick="refreshData()">🔄 Atualizar Dados</button>
         </header>

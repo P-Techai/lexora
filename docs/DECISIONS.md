@@ -10,3 +10,4 @@
 | ADR-0019 | 2026-08-14 | Classificação Fiscal de Produtos e Motor de Apuração | Aceito | Implementado na v0.12.0 |
 | ADR-0020 | 2026-08-14 | Motor Fiscal Operacional e Pipeline NF-e End-to-End | Aceito | Implementado na v1.0.0 |
 | ADR-0021 | 2026-08-14 | Catálogo Oficial de Conhecimento Fiscal e Batch NF-e | Aceito | Implementado na v1.1.0 |
+| ADR-0022 | 2026-08-14 | Operational Tax Workbench e Fluxo de Usuário NF-e | Aceito | Implementado na v1.2.0 |

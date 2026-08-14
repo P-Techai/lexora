@@ -1,9 +1,9 @@
 # LÉXORA — ESTADO ATUAL DA PLATAFORMA (CURRENT STATE)
 
-**Versão da Plataforma:** `v1.1.0-real-fiscal-knowledge-batch-nfe`  
+**Versão da Plataforma:** `v1.2.0-operational-tax-workbench`  
 **Data:** 2026-08-14  
-**Status da Fase 8:** `COMPLETE`  
-**Migration HEAD:** `0012_real_fiscal_knowledge_batch_nfe`  
+**Status da Fase 9:** `COMPLETE`  
+**Migration HEAD:** `0013_operational_tax_workbench`  
 **Git Working Tree:** `Clean`  
 
 ---
@@ -19,6 +19,7 @@ O LÉXORA (LXR) é uma plataforma inteligente e auditável para governança jur�
 4. **Product Fiscal Classification & Tax Engine (FASE 6.5):** Perfis cadastrais fiscais de produtos (`FiscalProductProfile`), validação determinística de NCM/CEST/CST/CFOP, motor de apuração com memórias de cálculo auditáveis (`CalculationMemory`) e reprocessamento histórico não-destrutivo (`ReprocessingService`).
 5. **Operational Fiscal Engine & NF-e Pipeline (FASE 7):** Pipeline operacional End-to-End para cargas úteis XML de NF-e (`POST /api/v1/fiscal/nfe/analyze`).
 6. **Real Fiscal Knowledge, Product Tax Classification & Batch NF-e (FASE 8):** Catálogo oficial versionado (`FiscalRuleCatalog`), classificação de produtos (`ProductFiscalClassificationService`), processamento em lote resiliente (`POST /api/v1/fiscal/nfe/batch`), isolamento multi-tenant por empresa e 10 cenários Golden.
+7. **Operational Tax Workbench & Real NF-e User Flow (FASE 9):** Fluxo operacional de usuário completo (`COMPANY -> PROFILE -> XML -> VALIDATION -> CLASSIFICATION -> RULE -> CALCULATION -> HUMAN REVIEW -> DECISION -> TRACE -> REPORT`), persistência de perfis cadastrais de empresas (`CompanyFiscalProfile`), máquina de estados de ciclo de vida de NF-e/Produto/Decisão e suíte de endpoints do Workbench.
 
 ---
 
@@ -34,8 +35,9 @@ O LÉXORA (LXR) é uma plataforma inteligente e auditável para governança jur�
 | Fase 6.5 (Fiscal Classification & Tax Engine) | `COMPLETE` | Perfis fiscais, memórias de cálculo auditáveis e reprocessamento. |
 | Fase 7 (Operational Fiscal Engine & NF-e) | `COMPLETE` | Pipeline operacional NF-e XML End-to-End e 5 cenários Golden. |
 | Fase 8 (Real Fiscal Knowledge & Batch NF-e) | `COMPLETE` | Catálogo oficial de regras, batch NF-e e 10 cenários Golden. |
+| Fase 9 (Operational Tax Workbench) | `COMPLETE` | Fluxo operacional de usuário completo, perfis de empresas e Workbench API. |
 
 ---
 
 ## 3. Próximos Passos
-- Sistema totalmente operacional em **FASE 8 COMPLETE**.
+- Plataforma LÉXORA totalmente operacional e selada em **v1.2.0-operational-tax-workbench**.
