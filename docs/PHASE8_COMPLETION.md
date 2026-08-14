@@ -7,7 +7,7 @@ Versão:
 v1.1.0-real-fiscal-knowledge-batch-nfe
 
 Commit:
-<pending_commit>
+0a97970
 
 Migration HEAD:
 0012_real_fiscal_knowledge_batch_nfe
